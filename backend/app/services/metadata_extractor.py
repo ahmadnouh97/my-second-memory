@@ -68,10 +68,13 @@ def _extract_youtube(url: str) -> RawMetadata:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
             thumbnail = None
-            if info.get("thumbnails"):
-                thumbnail = info["thumbnails"][-1].get("url")
-            elif info.get("thumbnail"):
+
+            if info.get("thumbnail"):
                 thumbnail = info.get("thumbnail")
+            elif info.get("thumbnails"):
+                thumbnail = info["thumbnails"][-1].get("url")
+            else:
+                thumbnail = f"https://i.ytimg.com/vi/{info.get('id')}/maxresdefault.jpg"
 
             return RawMetadata(
                 url=url,
