@@ -1,7 +1,0 @@
-{
-  "name": "second-memory",
-  "integrations": {
-    "capacitor": {}
-  },
-  "type": "angular-standalone"
-}
