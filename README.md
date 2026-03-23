@@ -117,6 +117,40 @@ my-second-memory/
 | DELETE | `/api/items/{id}` | Delete item |
 | POST | `/api/chat` | AI assistant (SSE streaming) |
 
+## Debugging the Backend in Docker
+
+A `docker-compose-debug.yml` override enables `debugpy` remote debugging on port `5678`.
+
+### Start in debug mode
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose-debug.yml up -d --build
+```
+
+The backend **blocks at startup** and waits for a debugger to attach before serving any requests.
+
+### Attach from VS Code
+
+Add to `.vscode/launch.json`:
+
+```json
+{
+  "name": "Docker: Remote Attach",
+  "type": "debugpy",
+  "request": "attach",
+  "connect": { "host": "localhost", "port": 5678 },
+  "pathMappings": [{ "localRoot": "${workspaceFolder}/backend", "remoteRoot": "/app" }]
+}
+```
+
+Then press **F5** (or Run → Start Debugging) with the `Docker: Remote Attach` config selected.
+
+### Attach from PyCharm
+
+Run → Edit Configurations → **+** → Python Remote Debug → host `localhost`, port `5678`, path mapping: local `<project>/backend` → remote `/app` → OK → click the debug button.
+
+> **Note:** Hot-reload (`--reload`) is disabled in debug mode. Uvicorn's reloader forks child processes and `debugpy` only attaches to the parent, making breakpoints unreliable. Restart the container to pick up code changes.
+
 ## Changing the LLM
 
 The backend uses LangChain. To switch from Groq to another provider:

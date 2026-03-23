@@ -1,0 +1,36 @@
+# Debug override — use alongside docker-compose.yml:
+#   docker compose -f docker-compose.yml -f docker-compose-debug.yml up -d --build
+#
+# The backend will pause at startup and wait for a debugger to attach on port 5678
+# before serving requests. Attach from VS Code using the "Remote Attach" launch config
+# below, or from PyCharm via Run > Edit Configurations > Python Remote Debug.
+#
+# VS Code launch.json entry:
+# {
+#   "name": "Docker: Remote Attach",
+#   "type": "debugpy",
+#   "request": "attach",
+#   "connect": { "host": "localhost", "port": 5678 },
+#   "pathMappings": [{ "localRoot": "${workspaceFolder}/backend", "remoteRoot": "/app" }]
+# }
+#
+# NOTE: --reload is intentionally omitted — uvicorn's reloader forks child
+# processes and debugpy only attaches to the parent, making breakpoints unreliable.
+
+version: "3.9"
+
+services:
+  backend:
+    ports:
+      - "8000:8000"
+      - "5678:5678"
+    environment:
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
+    command: >
+      uv run --with debugpy python -m debugpy
+      --listen 0.0.0.0:5678
+      --wait-for-client
+      -m uvicorn app.main:app
+      --host 0.0.0.0
+      --port 8000
