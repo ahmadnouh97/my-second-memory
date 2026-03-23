@@ -1,0 +1,115 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/home"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Add to Memory</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+
+  <!-- URL Input state -->
+  <div *ngIf="state === 'input' || state === 'extracting'">
+    <ion-item>
+      <ion-label position="stacked">URL</ion-label>
+      <ion-input
+        [(ngModel)]="url"
+        placeholder="Paste a URL (YouTube, article, any link...)"
+        type="url"
+        inputmode="url"
+        clearInput
+        (keyup.enter)="extract()"
+      ></ion-input>
+    </ion-item>
+
+    <p *ngIf="errorMsg" style="color: var(--ion-color-danger); font-size: 0.85rem; padding: 8px 16px;">
+      {{ errorMsg }}
+    </p>
+
+    <div style="padding: 16px 0;">
+      <ion-button
+        expand="block"
+        (click)="extract()"
+        [disabled]="!url.trim() || state === 'extracting'"
+      >
+        <ion-spinner *ngIf="state === 'extracting'" name="crescent" slot="start"></ion-spinner>
+        {{ state === 'extracting' ? 'Extracting...' : 'Extract & Preview' }}
+      </ion-button>
+    </div>
+  </div>
+
+  <!-- Preview & Edit state -->
+  <div *ngIf="state === 'preview' || state === 'saving'">
+
+    <!-- Thumbnail -->
+    <img
+      *ngIf="preview?.thumbnail_url"
+      [src]="preview!.thumbnail_url!"
+      alt="thumbnail"
+      style="width: 100%; max-height: 220px; object-fit: cover; border-radius: 12px; margin-bottom: 16px;"
+    />
+
+    <!-- Content type badge -->
+    <ion-chip [outline]="true" style="margin-bottom: 12px;">
+      <ion-label>{{ preview?.content_type }}</ion-label>
+    </ion-chip>
+
+    <!-- Title -->
+    <ion-item>
+      <ion-label position="stacked">Title</ion-label>
+      <ion-input [(ngModel)]="editTitle" placeholder="Title"></ion-input>
+    </ion-item>
+
+    <!-- Summary -->
+    <ion-item>
+      <ion-label position="stacked">Summary</ion-label>
+      <ion-textarea
+        [(ngModel)]="editSummary"
+        placeholder="Summary"
+        [autoGrow]="true"
+        rows="3"
+      ></ion-textarea>
+    </ion-item>
+
+    <!-- Tags -->
+    <ion-item>
+      <ion-label position="stacked">Tags</ion-label>
+      <ion-input
+        [(ngModel)]="newTag"
+        placeholder="Add tag and press Enter"
+        (keyup.enter)="addTag()"
+      ></ion-input>
+      <ion-button slot="end" fill="clear" (click)="addTag()">
+        <ion-icon slot="icon-only" name="add"></ion-icon>
+      </ion-button>
+    </ion-item>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 6px; padding: 12px 16px;">
+      <ion-chip
+        *ngFor="let tag of editTags"
+        color="primary"
+        [outline]="true"
+      >
+        <ion-label>{{ tag }}</ion-label>
+        <ion-icon name="close" (click)="removeTag(tag)"></ion-icon>
+      </ion-chip>
+    </div>
+
+    <p *ngIf="errorMsg" style="color: var(--ion-color-danger); font-size: 0.85rem; padding: 8px 16px;">
+      {{ errorMsg }}
+    </p>
+
+    <div style="padding: 16px 0; display: flex; gap: 12px;">
+      <ion-button fill="outline" (click)="reset()" [disabled]="state === 'saving'">
+        Cancel
+      </ion-button>
+      <ion-button expand="block" (click)="save()" [disabled]="!editTitle.trim() || state === 'saving'" style="flex: 1;">
+        <ion-spinner *ngIf="state === 'saving'" name="crescent" slot="start"></ion-spinner>
+        <ion-icon *ngIf="state !== 'saving'" name="checkmark" slot="start"></ion-icon>
+        {{ state === 'saving' ? 'Saving...' : 'Save to Memory' }}
+      </ion-button>
+    </div>
+  </div>
+
+</ion-content>

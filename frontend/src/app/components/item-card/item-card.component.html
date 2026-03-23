@@ -1,0 +1,47 @@
+<ion-card (click)="navigate()" button>
+  <img
+    *ngIf="item.thumbnail_url"
+    [src]="item.thumbnail_url"
+    class="item-thumbnail"
+    alt="thumbnail"
+    loading="lazy"
+    style="height: 160px; object-fit: cover; width: 100%;"
+  />
+
+  <ion-card-header>
+    <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+      <ion-icon [name]="typeIcon" [color]="typeColor" size="small"></ion-icon>
+      <span style="font-size: 0.7rem; color: var(--ion-color-medium); text-transform: uppercase; letter-spacing: 0.5px;">
+        {{ item.content_type }}
+      </span>
+      <span style="margin-left: auto; font-size: 0.7rem; color: var(--ion-color-medium);">
+        {{ item.created_at | date:'mediumDate' }}
+      </span>
+    </div>
+    <ion-card-title style="font-size: 1rem; font-weight: 600; line-height: 1.3;">
+      {{ item.title }}
+    </ion-card-title>
+  </ion-card-header>
+
+  <ion-card-content>
+    <p *ngIf="item.summary" style="font-size: 0.875rem; color: var(--ion-color-medium-shade); margin-bottom: 10px; line-height: 1.4;">
+      {{ item.summary | slice:0:120 }}{{ item.summary && item.summary.length > 120 ? '...' : '' }}
+    </p>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 4px; align-items: center;">
+      <ion-chip *ngFor="let tag of item.tags.slice(0, 4)" class="tag-chip" [outline]="true">
+        <ion-label>{{ tag }}</ion-label>
+      </ion-chip>
+      <ion-button
+        *ngIf="showDelete"
+        fill="clear"
+        color="danger"
+        size="small"
+        style="margin-left: auto;"
+        (click)="onDelete($event)"
+      >
+        <ion-icon slot="icon-only" name="trash"></ion-icon>
+      </ion-button>
+    </div>
+  </ion-card-content>
+</ion-card>

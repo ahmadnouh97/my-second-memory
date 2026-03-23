@@ -1,0 +1,25 @@
+<ion-card (click)="navigate()" button style="margin: 4px 0; --border-radius: 8px;">
+  <ion-card-content style="padding: 10px 12px;">
+    <div style="display: flex; align-items: flex-start; gap: 10px;">
+      <img
+        *ngIf="item.thumbnail_url"
+        [src]="item.thumbnail_url"
+        alt="thumbnail"
+        style="width: 60px; height: 45px; object-fit: cover; border-radius: 6px; flex-shrink: 0;"
+      />
+      <div style="flex: 1; min-width: 0;">
+        <p style="font-size: 0.85rem; font-weight: 600; margin: 0 0 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+          {{ item.title }}
+        </p>
+        <ion-chip
+          *ngFor="let tag of item.tags.slice(0, 3)"
+          style="font-size: 0.65rem; height: 18px; margin: 0 2px 0 0;"
+          [outline]="true"
+        >
+          <ion-label>{{ tag }}</ion-label>
+        </ion-chip>
+      </div>
+      <ion-icon name="open-outline" color="medium" style="flex-shrink: 0; margin-top: 2px;"></ion-icon>
+    </div>
+  </ion-card-content>
+</ion-card>
