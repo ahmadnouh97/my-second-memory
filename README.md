@@ -19,7 +19,7 @@ A personal content curation app that saves, organizes, and lets you query everyt
 | Database | PostgreSQL 16 + pgvector |
 | Embeddings | sentence-transformers (all-MiniLM-L6-v2, local) |
 | LLM | Groq API — qwen/qwen3-32b via LangChain |
-| Frontend | Ionic 8 + Angular 17 (Standalone) + Capacitor 6 |
+| Frontend | Flutter 3.41 + Riverpod + go_router (Android + Web) |
 
 ## Quick Start
 
@@ -43,31 +43,27 @@ Swagger docs at `http://localhost:8000/docs`
 ### 3. Run the web frontend
 
 ```bash
-npm install -g @ionic/cli   # one-time
 cd frontend
-npm install
-npx ionic serve
+flutter run -d chrome
 ```
 
-App available at `http://localhost:8100`
+App available at `http://localhost:<port>` (printed by Flutter)
 
 ### 4. Android setup
 
 ```bash
 cd frontend
-npm install
-npx cap add android
-npx cap sync
+flutter run                  # Connected device or emulator
 
-# Apply the share intent filter from android-manifest-patch.xml
-# to android/app/src/main/AndroidManifest.xml
-
-npx cap open android   # Opens Android Studio → Run on device/emulator
+# Build release APK
+flutter build apk --release
 ```
 
 > **Android API URL**: The Android app points to `http://10.0.2.2:8000` (emulator localhost).
-> For a real device on the same network, update `src/environments/environment.prod.ts`
-> with your machine's local IP (e.g., `http://192.168.1.x:8000`).
+> For a real device on the same network, set `BACKEND_URL` at build time:
+> ```bash
+> flutter build apk --dart-define=BACKEND_URL=http://192.168.1.x:8000
+> ```
 
 ## Project Structure
 
@@ -95,13 +91,19 @@ my-second-memory/
 │       └── routers/
 │           ├── items.py      # CRUD + search
 │           └── chat.py       # AI assistant (SSE)
-└── frontend/
-    ├── src/app/
-    │   ├── pages/            # home, add-item, item-detail, chat
-    │   ├── components/       # item-card, filter-bar, chat-item-widget
-    │   ├── services/         # api.service.ts, share.service.ts
-    │   └── models/           # TypeScript interfaces
-    └── android-manifest-patch.xml
+└── frontend/                 # Flutter app
+    ├── lib/
+    │   ├── main.dart
+    │   ├── config/           # environment.dart, router.dart
+    │   ├── models/           # Item, ChatMessage (Freezed)
+    │   ├── services/         # api_service.dart, share_service.dart
+    │   ├── providers/        # Riverpod: items_provider, chat_provider
+    │   ├── theme/            # app_theme.dart (Material 3 dark)
+    │   ├── widgets/          # item_card, filter_bar, chat_item_card, …
+    │   └── pages/            # home, add_item, item_detail, chat
+    ├── assets/
+    │   └── logo.svg          # App logo (also used as launcher icon)
+    └── android/
 ```
 
 ## API Reference
@@ -116,6 +118,27 @@ my-second-memory/
 | PUT | `/api/items/{id}` | Update item |
 | DELETE | `/api/items/{id}` | Delete item |
 | POST | `/api/chat` | AI assistant (SSE streaming) |
+
+## Frontend Development
+
+```bash
+cd frontend
+
+# Run on web (Chrome)
+flutter run -d chrome
+
+# Run on Android emulator / connected device
+flutter run
+
+# Build release APK
+flutter build apk --release
+
+# Regenerate Freezed / JSON models after editing model files
+dart run build_runner build --delete-conflicting-outputs
+
+# Regenerate app icons after changing assets/logo.svg
+dart run flutter_launcher_icons
+```
 
 ## Debugging the Backend in Docker
 

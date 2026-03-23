@@ -30,17 +30,26 @@ docker compose exec backend uv run <command>
 docker compose exec backend uv run alembic revision --autogenerate -m "description"
 ```
 
-### Frontend
+### Frontend (Flutter)
 
 ```bash
 cd frontend
-npm install
-npx ionic serve          # Web dev server at http://localhost:8100
 
-# Android
-npx cap add android      # First time only
-npx cap sync             # After any frontend build
-npx cap open android     # Open Android Studio
+# Run on web (Chrome)
+flutter run -d chrome
+
+# Run on Android emulator / connected device
+flutter run
+
+# Build APK
+flutter build apk --release
+
+# Regenerate Freezed / JSON models after editing model files
+dart run build_runner build --delete-conflicting-outputs
+
+# Install / update dependencies
+flutter pub get
+flutter pub upgrade
 ```
 
 ### Local backend development (without Docker)
@@ -62,7 +71,7 @@ docker-compose.yml
 └── backend Python 3.12 FastAPI app
 ```
 
-The frontend is a separate Ionic Angular standalone app (not containerised in dev) that talks to the backend over HTTP. On Android, Capacitor wraps it as a native app.
+The frontend is a Flutter app (not containerised in dev) that talks to the backend over HTTP. It targets Android (native) and web (Chrome). No Ionic/Angular — replaced with Flutter + Riverpod + go_router.
 
 ### Backend (`backend/app/`)
 
