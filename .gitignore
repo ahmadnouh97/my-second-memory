@@ -46,5 +46,9 @@ Thumbs.db
 # Logs
 *.log
 
+# IDE
+.cursor/
+.vscode/
+
 # Claude settings
 .claude/
