@@ -1,0 +1,90 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="200" y2="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0A0E27"/>
+      <stop offset="100%" stop-color="#1E1B4B"/>
+    </linearGradient>
+    <linearGradient id="mGrad" x1="40" y1="55" x2="160" y2="145" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#A5B4FC"/>
+      <stop offset="100%" stop-color="#6366F1"/>
+    </linearGradient>
+    <linearGradient id="sparkGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FCD34D"/>
+      <stop offset="100%" stop-color="#F59E0B"/>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="sparkGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background rounded rect -->
+  <rect width="200" height="200" rx="44" fill="url(#bgGrad)"/>
+
+  <!-- Subtle grid texture dots -->
+  <circle cx="40" cy="40" r="1.5" fill="#6366F1" opacity="0.25"/>
+  <circle cx="100" cy="30" r="1.5" fill="#6366F1" opacity="0.2"/>
+  <circle cx="160" cy="40" r="1.5" fill="#6366F1" opacity="0.25"/>
+  <circle cx="30" cy="100" r="1.5" fill="#6366F1" opacity="0.2"/>
+  <circle cx="170" cy="100" r="1.5" fill="#6366F1" opacity="0.2"/>
+  <circle cx="40" cy="160" r="1.5" fill="#6366F1" opacity="0.25"/>
+  <circle cx="160" cy="160" r="1.5" fill="#6366F1" opacity="0.25"/>
+
+  <!-- Stylised M — memory waves (two peaks like a waveform / brain outline) -->
+  <path d="M42 148
+           L42 82
+           C42 72 50 65 58 72
+           L100 118
+           L142 72
+           C150 65 158 72 158 82
+           L158 148"
+        stroke="url(#mGrad)"
+        stroke-width="13"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        fill="none"
+        filter="url(#glow)"/>
+
+  <!-- Node dot at peak of M -->
+  <circle cx="100" cy="118" r="6" fill="#C7D2FE" filter="url(#glow)"/>
+
+  <!-- Small accent dots at base corners -->
+  <circle cx="42"  cy="148" r="4.5" fill="#818CF8" opacity="0.8"/>
+  <circle cx="158" cy="148" r="4.5" fill="#818CF8" opacity="0.8"/>
+
+  <!-- Sparkle / AI star — top right -->
+  <path d="M153 34
+           L156.5 44.5
+           L167 48
+           L156.5 51.5
+           L153 62
+           L149.5 51.5
+           L139 48
+           L149.5 44.5
+           Z"
+        fill="url(#sparkGrad)"
+        filter="url(#sparkGlow)"/>
+
+  <!-- Tiny secondary sparkle -->
+  <path d="M170 24
+           L171.5 28.5
+           L176 30
+           L171.5 31.5
+           L170 36
+           L168.5 31.5
+           L164 30
+           L168.5 28.5
+           Z"
+        fill="#FCD34D"
+        opacity="0.6"/>
+</svg>
