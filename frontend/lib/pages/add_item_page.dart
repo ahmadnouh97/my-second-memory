@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../models/item.dart';
 import '../providers/items_provider.dart';
 import '../theme/app_theme.dart';
+import '../utils/image_utils.dart';
 import '../widgets/content_type_badge.dart';
 import '../widgets/tag_chip.dart';
 
@@ -183,7 +184,7 @@ class _AddItemPageState extends ConsumerState<AddItemPage> {
           ClipRRect(
             borderRadius: BorderRadius.circular(16),
             child: CachedNetworkImage(
-              imageUrl: _preview!.thumbnailUrl!,
+              imageUrl: proxyImageUrl(_preview!.thumbnailUrl!),
               height: 180,
               fit: BoxFit.cover,
             ),

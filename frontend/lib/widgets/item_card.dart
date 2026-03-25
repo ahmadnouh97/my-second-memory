@@ -4,6 +4,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 
 import '../models/item.dart';
 import '../theme/app_theme.dart';
+import '../utils/image_utils.dart';
 import 'content_type_badge.dart';
 import 'tag_chip.dart';
 
@@ -69,7 +70,7 @@ class ItemCard extends StatelessWidget {
                   height: 130,
                   child: item.thumbnailUrl != null
                       ? CachedNetworkImage(
-                          imageUrl: item.thumbnailUrl!,
+                          imageUrl: proxyImageUrl(item.thumbnailUrl!),
                           fit: BoxFit.cover,
                           placeholder: (_, __) => _thumbnailPlaceholder(accentColor),
                           errorWidget: (_, __, ___) => _thumbnailPlaceholder(accentColor),

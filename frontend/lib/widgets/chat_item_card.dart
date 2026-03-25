@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../models/item.dart';
 import '../theme/app_theme.dart';
+import '../utils/image_utils.dart';
 import 'content_type_badge.dart';
 import 'tag_chip.dart';
 
@@ -38,7 +39,7 @@ class ChatItemCard extends StatelessWidget {
                 borderRadius:
                     const BorderRadius.vertical(top: Radius.circular(12)),
                 child: CachedNetworkImage(
-                  imageUrl: item.thumbnailUrl!,
+                  imageUrl: proxyImageUrl(item.thumbnailUrl!),
                   height: 100,
                   width: double.infinity,
                   fit: BoxFit.cover,

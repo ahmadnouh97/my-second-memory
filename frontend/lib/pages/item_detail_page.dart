@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../models/item.dart';
 import '../providers/items_provider.dart';
 import '../theme/app_theme.dart';
+import '../utils/image_utils.dart';
 import '../widgets/content_type_badge.dart';
 import '../widgets/tag_chip.dart';
 
@@ -192,7 +193,7 @@ class _ItemDetailPageState extends ConsumerState<ItemDetailPage> {
                         fit: StackFit.expand,
                         children: [
                           CachedNetworkImage(
-                            imageUrl: item.thumbnailUrl!,
+                            imageUrl: proxyImageUrl(item.thumbnailUrl!),
                             fit: BoxFit.cover,
                           ),
                           Container(
