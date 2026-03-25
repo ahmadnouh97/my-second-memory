@@ -21,8 +21,12 @@ class AppColors {
   // Content type colours
   static const youtube = Color(0xFFEF4444);
   static const instagram = Color(0xFFA855F7);
-  static const article = Color(0xFF3B82F6);
-  static const link = Color(0xFF6B7280);
+  static const linkedin = Color(0xFF0A66C2);
+  static const github = Color(0xFF6E7681);
+  static const facebook = Color(0xFF1877F2);
+  static const tiktok = Color(0xFF69C9D0);
+  static const reddit = Color(0xFFFF4500);
+  static const other = Color(0xFF6B7280);
 
   // Text
   static const textPrimary = Color(0xFFF1F5F9);

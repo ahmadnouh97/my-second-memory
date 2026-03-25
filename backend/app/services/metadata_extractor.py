@@ -9,6 +9,11 @@ from bs4 import BeautifulSoup
 
 YOUTUBE_DOMAINS = {"youtube.com", "youtu.be", "www.youtube.com", "m.youtube.com"}
 INSTAGRAM_DOMAINS = {"instagram.com", "www.instagram.com"}
+LINKEDIN_DOMAINS = {"linkedin.com", "www.linkedin.com"}
+GITHUB_DOMAINS = {"github.com", "www.github.com"}
+FACEBOOK_DOMAINS = {"facebook.com", "www.facebook.com", "fb.com", "m.facebook.com"}
+TIKTOK_DOMAINS = {"tiktok.com", "www.tiktok.com", "vm.tiktok.com", "vt.tiktok.com"}
+REDDIT_DOMAINS = {"reddit.com", "www.reddit.com", "old.reddit.com", "new.reddit.com"}
 
 HEADERS = {
     "User-Agent": (
@@ -22,7 +27,7 @@ HEADERS = {
 @dataclass
 class RawMetadata:
     url: str
-    content_type: str  # youtube | instagram | article | link
+    content_type: str  # youtube | instagram | linkedin | github | facebook | tiktok | reddit | other
     raw_title: str | None = None
     description: str | None = None
     thumbnail_url: str | None = None
@@ -36,7 +41,17 @@ def detect_content_type(url: str) -> str:
         return "youtube"
     if domain in INSTAGRAM_DOMAINS:
         return "instagram"
-    return "article"
+    if domain in LINKEDIN_DOMAINS:
+        return "linkedin"
+    if domain in GITHUB_DOMAINS:
+        return "github"
+    if domain in FACEBOOK_DOMAINS:
+        return "facebook"
+    if domain in TIKTOK_DOMAINS:
+        return "tiktok"
+    if domain in REDDIT_DOMAINS:
+        return "reddit"
+    return "other"
 
 
 def extract_metadata(url: str) -> RawMetadata:
@@ -45,7 +60,17 @@ def extract_metadata(url: str) -> RawMetadata:
         return _extract_youtube(url)
     if content_type == "instagram":
         return _extract_instagram(url)
-    return _extract_article(url)
+    if content_type == "linkedin":
+        return _extract_linkedin(url)
+    if content_type == "github":
+        return _extract_github(url)
+    if content_type == "facebook":
+        return _extract_facebook(url)
+    if content_type == "tiktok":
+        return _extract_tiktok(url)
+    if content_type == "reddit":
+        return _extract_reddit(url)
+    return _extract_opengraph(url, content_type="other")
 
 
 def _youtube_video_id(url: str) -> str | None:
@@ -146,43 +171,43 @@ def _extract_instagram(url: str) -> RawMetadata:
     return _extract_opengraph(url, content_type="instagram")
 
 
-def _extract_article(url: str) -> RawMetadata:
-    # Try trafilatura first for full article extraction
-    try:
-        downloaded = trafilatura.fetch_url(url)
-        if downloaded:
-            metadata = trafilatura.extract_metadata(downloaded)
-            content = trafilatura.extract(
-                downloaded,
-                include_comments=False,
-                include_tables=True,
-                favor_precision=True,
-            )
-            title = metadata.title if metadata else None
-            description = metadata.description if metadata else None
-            thumbnail = metadata.image if metadata else None
+def _extract_linkedin(url: str) -> RawMetadata:
+    return _extract_opengraph(url, content_type="linkedin")
 
-            if title or content:
-                return RawMetadata(
-                    url=url,
-                    content_type="article",
-                    raw_title=title,
-                    description=description,
-                    thumbnail_url=thumbnail,
-                    content=content[:5000] if content else None,
-                    extra={
-                        "author": metadata.author if metadata else None,
-                        "date": str(metadata.date) if metadata and metadata.date else None,
-                    },
-                )
+
+def _extract_github(url: str) -> RawMetadata:
+    return _extract_opengraph(url, content_type="github")
+
+
+def _extract_facebook(url: str) -> RawMetadata:
+    return _extract_opengraph(url, content_type="facebook")
+
+
+def _extract_tiktok(url: str) -> RawMetadata:
+    # Try yt-dlp first (works for public TikTok videos)
+    ydl_opts = {"quiet": True, "no_warnings": True, "skip_download": True}
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+            return RawMetadata(
+                url=url,
+                content_type="tiktok",
+                raw_title=info.get("title") or info.get("description", "")[:100],
+                description=info.get("description", "")[:2000],
+                thumbnail_url=info.get("thumbnail"),
+                extra={"uploader": info.get("uploader")},
+            )
     except Exception:
         pass
 
-    # Fallback: OpenGraph
-    return _extract_opengraph(url, content_type="link")
+    return _extract_opengraph(url, content_type="tiktok")
 
 
-def _extract_opengraph(url: str, content_type: str = "link") -> RawMetadata:
+def _extract_reddit(url: str) -> RawMetadata:
+    return _extract_opengraph(url, content_type="reddit")
+
+
+def _extract_opengraph(url: str, content_type: str = "other") -> RawMetadata:
     try:
         response = requests.get(url, headers=HEADERS, timeout=10)
         response.raise_for_status()

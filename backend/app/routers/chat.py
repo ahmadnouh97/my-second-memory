@@ -51,7 +51,7 @@ def make_tools(db: AsyncSession):
         Use this when the user asks about specific topics, titles, or content.
         Args:
             query: Search query (keywords or natural language)
-            content_type: Optional filter - one of: youtube, instagram, article, link
+            content_type: Optional filter - one of: youtube, instagram, linkedin, github, facebook, tiktok, reddit, other
         """
         repo = ItemRepository(db)
         results = await hybrid_search(repo, query, content_type=content_type, limit=5)
@@ -73,7 +73,7 @@ def make_tools(db: AsyncSession):
         or "show me all YouTube videos".
         Args:
             tags: Filter by these tags (e.g. ["productivity", "python"])
-            content_type: Filter by type: youtube, instagram, article, link
+            content_type: Filter by type: youtube, instagram, linkedin, github, facebook, tiktok, reddit, other
             date_from: ISO date string to filter from (e.g. "2025-01-01")
             date_to: ISO date string to filter to (e.g. "2025-12-31")
             limit: Number of items to return (max 20)

@@ -11,7 +11,11 @@ _$ItemImpl _$$ItemImplFromJson(Map<String, dynamic> json) => _$ItemImpl(
   url: json['url'] as String,
   title: json['title'] as String,
   summary: json['summary'] as String?,
-  contentType: $enumDecode(_$ContentTypeEnumMap, json['content_type']),
+  contentType: $enumDecode(
+    _$ContentTypeEnumMap,
+    json['content_type'],
+    unknownValue: ContentType.other,
+  ),
   tags:
       (json['tags'] as List<dynamic>?)?.map((e) => e as String).toList() ??
       const [],
@@ -36,8 +40,12 @@ Map<String, dynamic> _$$ItemImplToJson(_$ItemImpl instance) =>
 const _$ContentTypeEnumMap = {
   ContentType.youtube: 'youtube',
   ContentType.instagram: 'instagram',
-  ContentType.article: 'article',
-  ContentType.link: 'link',
+  ContentType.linkedin: 'linkedin',
+  ContentType.github: 'github',
+  ContentType.facebook: 'facebook',
+  ContentType.tiktok: 'tiktok',
+  ContentType.reddit: 'reddit',
+  ContentType.other: 'other',
 };
 
 _$PaginatedResponseImpl _$$PaginatedResponseImplFromJson(
@@ -63,7 +71,11 @@ Map<String, dynamic> _$$PaginatedResponseImplToJson(
 _$ExtractPreviewImpl _$$ExtractPreviewImplFromJson(Map<String, dynamic> json) =>
     _$ExtractPreviewImpl(
       url: json['url'] as String,
-      contentType: $enumDecode(_$ContentTypeEnumMap, json['content_type']),
+      contentType: $enumDecode(
+        _$ContentTypeEnumMap,
+        json['content_type'],
+        unknownValue: ContentType.other,
+      ),
       title: json['title'] as String,
       summary: json['summary'] as String?,
       tags:

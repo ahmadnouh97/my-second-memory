@@ -40,8 +40,12 @@ class ContentTypeBadge extends StatelessWidget {
   static (String, IconData, Color) _data(ContentType type) => switch (type) {
         ContentType.youtube => ('YouTube', Icons.play_circle_outline_rounded, AppColors.youtube),
         ContentType.instagram => ('Instagram', Icons.camera_alt_outlined, AppColors.instagram),
-        ContentType.article => ('Article', Icons.article_outlined, AppColors.article),
-        ContentType.link => ('Link', Icons.link_rounded, AppColors.link),
+        ContentType.linkedin => ('LinkedIn', Icons.work_outline_rounded, AppColors.linkedin),
+        ContentType.github => ('GitHub', Icons.code_rounded, AppColors.github),
+        ContentType.facebook => ('Facebook', Icons.people_outline_rounded, AppColors.facebook),
+        ContentType.tiktok => ('TikTok', Icons.music_note_outlined, AppColors.tiktok),
+        ContentType.reddit => ('Reddit', Icons.forum_outlined, AppColors.reddit),
+        ContentType.other => ('Other', Icons.link_rounded, AppColors.other),
       };
 
   static Color colorFor(ContentType type) => _data(type).$3;

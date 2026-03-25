@@ -1,6 +1,6 @@
 # Second Memory
 
-A personal content curation app that saves, organizes, and lets you query everything interesting you find online — YouTube videos, Instagram reels, articles, blogs, or any URL.
+A personal content curation app that saves, organizes, and lets you query everything interesting you find online — YouTube videos, Instagram reels, LinkedIn posts, GitHub repos, Facebook posts, TikTok videos, Reddit threads, or any URL.
 
 ## Features
 

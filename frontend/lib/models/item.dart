@@ -6,8 +6,12 @@ part 'item.g.dart';
 enum ContentType {
   @JsonValue('youtube') youtube,
   @JsonValue('instagram') instagram,
-  @JsonValue('article') article,
-  @JsonValue('link') link,
+  @JsonValue('linkedin') linkedin,
+  @JsonValue('github') github,
+  @JsonValue('facebook') facebook,
+  @JsonValue('tiktok') tiktok,
+  @JsonValue('reddit') reddit,
+  @JsonValue('other') other,
 }
 
 @freezed
@@ -17,7 +21,7 @@ class Item with _$Item {
     required String url,
     required String title,
     String? summary,
-    @JsonKey(name: 'content_type') required ContentType contentType,
+    @JsonKey(name: 'content_type', unknownEnumValue: ContentType.other) required ContentType contentType,
     @Default([]) List<String> tags,
     @JsonKey(name: 'thumbnail_url') String? thumbnailUrl,
     @JsonKey(name: 'created_at') required DateTime createdAt,
@@ -44,7 +48,7 @@ class PaginatedResponse with _$PaginatedResponse {
 class ExtractPreview with _$ExtractPreview {
   const factory ExtractPreview({
     required String url,
-    @JsonKey(name: 'content_type') required ContentType contentType,
+    @JsonKey(name: 'content_type', unknownEnumValue: ContentType.other) required ContentType contentType,
     required String title,
     String? summary,
     @Default([]) List<String> tags,

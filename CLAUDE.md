@@ -86,7 +86,7 @@ Layered architecture: **Router → Service → Repository → DB**
 | Schemas | `schemas/item.py` | Pydantic request/response models |
 
 **Key services:**
-- `metadata_extractor.py` — detects URL type (YouTube/Instagram/article/link), extracts raw metadata using `yt-dlp` (YouTube/Instagram), `trafilatura` (articles), or `BeautifulSoup4` (OpenGraph fallback)
+- `metadata_extractor.py` — detects URL type (YouTube/Instagram/LinkedIn/GitHub/Facebook/TikTok/Reddit/other), extracts raw metadata using `yt-dlp` (YouTube/Instagram/TikTok), or `BeautifulSoup4` (OpenGraph fallback for all others)
 - `ai_service.py` — LangChain + Groq (`qwen/qwen3-32b`) with `.with_structured_output()` to generate refined title, 2–3 sentence summary, and 5–8 tags from raw metadata
 - `embedding_service.py` — singleton using Google AI Studio (`gemini-embedding-001`, 768-dim). `warmup()` is called in `lifespan` to validate the API key at startup. `encode()` uses `RETRIEVAL_QUERY` task type; `encode_for_item()` uses `RETRIEVAL_DOCUMENT`.
 - `search_service.py` — Reciprocal Rank Fusion (RRF, k=60) combining pgvector cosine similarity and PostgreSQL `tsvector` full-text search

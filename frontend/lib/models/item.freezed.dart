@@ -25,7 +25,7 @@ mixin _$Item {
   String get url => throw _privateConstructorUsedError;
   String get title => throw _privateConstructorUsedError;
   String? get summary => throw _privateConstructorUsedError;
-  @JsonKey(name: 'content_type')
+  @JsonKey(name: 'content_type', unknownEnumValue: ContentType.other)
   ContentType get contentType => throw _privateConstructorUsedError;
   List<String> get tags => throw _privateConstructorUsedError;
   @JsonKey(name: 'thumbnail_url')
@@ -54,7 +54,8 @@ abstract class $ItemCopyWith<$Res> {
     String url,
     String title,
     String? summary,
-    @JsonKey(name: 'content_type') ContentType contentType,
+    @JsonKey(name: 'content_type', unknownEnumValue: ContentType.other)
+    ContentType contentType,
     List<String> tags,
     @JsonKey(name: 'thumbnail_url') String? thumbnailUrl,
     @JsonKey(name: 'created_at') DateTime createdAt,
@@ -144,7 +145,8 @@ abstract class _$$ItemImplCopyWith<$Res> implements $ItemCopyWith<$Res> {
     String url,
     String title,
     String? summary,
-    @JsonKey(name: 'content_type') ContentType contentType,
+    @JsonKey(name: 'content_type', unknownEnumValue: ContentType.other)
+    ContentType contentType,
     List<String> tags,
     @JsonKey(name: 'thumbnail_url') String? thumbnailUrl,
     @JsonKey(name: 'created_at') DateTime createdAt,
@@ -225,7 +227,8 @@ class _$ItemImpl implements _Item {
     required this.url,
     required this.title,
     this.summary,
-    @JsonKey(name: 'content_type') required this.contentType,
+    @JsonKey(name: 'content_type', unknownEnumValue: ContentType.other)
+    required this.contentType,
     final List<String> tags = const [],
     @JsonKey(name: 'thumbnail_url') this.thumbnailUrl,
     @JsonKey(name: 'created_at') required this.createdAt,
@@ -244,7 +247,7 @@ class _$ItemImpl implements _Item {
   @override
   final String? summary;
   @override
-  @JsonKey(name: 'content_type')
+  @JsonKey(name: 'content_type', unknownEnumValue: ContentType.other)
   final ContentType contentType;
   final List<String> _tags;
   @override
@@ -325,7 +328,8 @@ abstract class _Item implements Item {
     required final String url,
     required final String title,
     final String? summary,
-    @JsonKey(name: 'content_type') required final ContentType contentType,
+    @JsonKey(name: 'content_type', unknownEnumValue: ContentType.other)
+    required final ContentType contentType,
     final List<String> tags,
     @JsonKey(name: 'thumbnail_url') final String? thumbnailUrl,
     @JsonKey(name: 'created_at') required final DateTime createdAt,
@@ -343,7 +347,7 @@ abstract class _Item implements Item {
   @override
   String? get summary;
   @override
-  @JsonKey(name: 'content_type')
+  @JsonKey(name: 'content_type', unknownEnumValue: ContentType.other)
   ContentType get contentType;
   @override
   List<String> get tags;
@@ -600,7 +604,7 @@ ExtractPreview _$ExtractPreviewFromJson(Map<String, dynamic> json) {
 /// @nodoc
 mixin _$ExtractPreview {
   String get url => throw _privateConstructorUsedError;
-  @JsonKey(name: 'content_type')
+  @JsonKey(name: 'content_type', unknownEnumValue: ContentType.other)
   ContentType get contentType => throw _privateConstructorUsedError;
   String get title => throw _privateConstructorUsedError;
   String? get summary => throw _privateConstructorUsedError;
@@ -628,7 +632,8 @@ abstract class $ExtractPreviewCopyWith<$Res> {
   @useResult
   $Res call({
     String url,
-    @JsonKey(name: 'content_type') ContentType contentType,
+    @JsonKey(name: 'content_type', unknownEnumValue: ContentType.other)
+    ContentType contentType,
     String title,
     String? summary,
     List<String> tags,
@@ -707,7 +712,8 @@ abstract class _$$ExtractPreviewImplCopyWith<$Res>
   @useResult
   $Res call({
     String url,
-    @JsonKey(name: 'content_type') ContentType contentType,
+    @JsonKey(name: 'content_type', unknownEnumValue: ContentType.other)
+    ContentType contentType,
     String title,
     String? summary,
     List<String> tags,
@@ -778,7 +784,8 @@ class __$$ExtractPreviewImplCopyWithImpl<$Res>
 class _$ExtractPreviewImpl implements _ExtractPreview {
   const _$ExtractPreviewImpl({
     required this.url,
-    @JsonKey(name: 'content_type') required this.contentType,
+    @JsonKey(name: 'content_type', unknownEnumValue: ContentType.other)
+    required this.contentType,
     required this.title,
     this.summary,
     final List<String> tags = const [],
@@ -792,7 +799,7 @@ class _$ExtractPreviewImpl implements _ExtractPreview {
   @override
   final String url;
   @override
-  @JsonKey(name: 'content_type')
+  @JsonKey(name: 'content_type', unknownEnumValue: ContentType.other)
   final ContentType contentType;
   @override
   final String title;
@@ -867,7 +874,8 @@ class _$ExtractPreviewImpl implements _ExtractPreview {
 abstract class _ExtractPreview implements ExtractPreview {
   const factory _ExtractPreview({
     required final String url,
-    @JsonKey(name: 'content_type') required final ContentType contentType,
+    @JsonKey(name: 'content_type', unknownEnumValue: ContentType.other)
+    required final ContentType contentType,
     required final String title,
     final String? summary,
     final List<String> tags,
@@ -881,7 +889,7 @@ abstract class _ExtractPreview implements ExtractPreview {
   @override
   String get url;
   @override
-  @JsonKey(name: 'content_type')
+  @JsonKey(name: 'content_type', unknownEnumValue: ContentType.other)
   ContentType get contentType;
   @override
   String get title;

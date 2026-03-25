@@ -153,8 +153,12 @@ class ItemCard extends StatelessWidget {
   IconData _placeholderIcon(ContentType type) => switch (type) {
         ContentType.youtube => Icons.play_circle_outline_rounded,
         ContentType.instagram => Icons.camera_alt_outlined,
-        ContentType.article => Icons.article_outlined,
-        ContentType.link => Icons.link_rounded,
+        ContentType.linkedin => Icons.work_outline_rounded,
+        ContentType.github => Icons.code_rounded,
+        ContentType.facebook => Icons.people_outline_rounded,
+        ContentType.tiktok => Icons.music_note_outlined,
+        ContentType.reddit => Icons.forum_outlined,
+        ContentType.other => Icons.link_rounded,
       };
 }
 
