@@ -35,8 +35,8 @@ docker compose exec backend uv run alembic revision --autogenerate -m "descripti
 ```bash
 cd frontend
 
-# Run on web (Chrome)
-flutter run -d chrome
+# Run on web (Chrome) — always on port 4200
+flutter run -d chrome --web-port=4200
 
 # Run on Android emulator / connected device
 flutter run
