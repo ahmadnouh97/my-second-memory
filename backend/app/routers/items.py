@@ -43,7 +43,7 @@ async def extract_url(body: ExtractRequest):
 async def create_item(body: ItemCreate, db: AsyncSession = Depends(get_db)):
     """Save a confirmed item to the database."""
     repo = ItemRepository(db)
-    emb = embedding_service.encode_for_item(body.title, body.summary)
+    emb = await embedding_service.encode_for_item(body.title, body.summary)
     return await repo.create(body, embedding=emb)
 
 
@@ -101,7 +101,7 @@ async def update_item(item_id: uuid.UUID, body: ItemUpdate, db: AsyncSession = D
     new_title = body.title or existing.title
     new_summary = body.summary if body.summary is not None else existing.summary
     if body.title or body.summary is not None:
-        new_embedding = embedding_service.encode_for_item(new_title, new_summary)
+        new_embedding = await embedding_service.encode_for_item(new_title, new_summary)
 
     item = await repo.update(item_id, body, embedding=new_embedding)
     return ItemResponse.model_validate(item)

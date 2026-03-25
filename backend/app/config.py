@@ -6,6 +6,7 @@ class Settings(BaseSettings):
 
     database_url: str
     groq_api_key: str
+    google_api_key: str
     app_env: str = "development"
     cors_origins: str = "http://localhost:8100,http://localhost:4200"
 

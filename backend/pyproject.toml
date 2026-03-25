@@ -19,8 +19,8 @@ dependencies = [
     "langchain-groq==0.2.3",
     "langchain-community==0.3.14",
     "langgraph==0.2.60",
-    # Embeddings (local)
-    "sentence-transformers==3.3.1",
+    # Embeddings (Google AI Studio)
+    "google-genai>=1.0.0",
     # Metadata extraction
     "yt-dlp>=2025.1.26",
     "trafilatura==2.0.0",
@@ -30,6 +30,4 @@ dependencies = [
     # Utilities
     "python-multipart==0.0.20",
     "httpx==0.28.1",
-    # Debugger (used by docker-compose-debug.yml)
-    "debugpy==1.8.14",
 ]

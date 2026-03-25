@@ -16,7 +16,7 @@ async def hybrid_search(
     Combines vector search and full-text search using Reciprocal Rank Fusion (RRF).
     Score = 1/(RRF_K + rank_vector) + 1/(RRF_K + rank_fts)
     """
-    query_embedding = embedding_service.encode(query)
+    query_embedding = await embedding_service.encode(query)
 
     # Run both searches in parallel (asyncio gather would require restructuring;
     # sequential is fine for now — both are fast indexed queries)

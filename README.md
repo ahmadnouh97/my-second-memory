@@ -17,7 +17,7 @@ A personal content curation app that saves, organizes, and lets you query everyt
 |---|---|
 | Backend | Python 3.12 + FastAPI |
 | Database | PostgreSQL 16 + pgvector |
-| Embeddings | sentence-transformers (all-MiniLM-L6-v2, local) |
+| Embeddings | Google AI Studio — Gemini `gemini-embedding-001` (768-dim, API) |
 | LLM | Groq API — qwen/qwen3-32b via LangChain |
 | Frontend | Flutter 3.41 + Riverpod + go_router (Android + Web) |
 
@@ -27,7 +27,9 @@ A personal content curation app that saves, organizes, and lets you query everyt
 
 ```bash
 cp .env.example .env
-# Edit .env and set GROQ_API_KEY=your_key_here
+# Edit .env and set:
+#   GROQ_API_KEY=your_groq_key_here
+#   GOOGLE_API_KEY=your_google_ai_studio_key_here
 ```
 
 ### 2. Start the backend
@@ -35,6 +37,9 @@ cp .env.example .env
 ```bash
 docker compose up -d --build
 docker compose exec backend uv run alembic upgrade head
+
+# First time only: re-embed any existing items with the new model
+docker compose exec backend uv run python scripts/reembed_all.py
 ```
 
 API available at `http://localhost:8000`
@@ -44,10 +49,10 @@ Swagger docs at `http://localhost:8000/docs`
 
 ```bash
 cd frontend
-flutter run -d chrome
+flutter run -d chrome --web-port=4200
 ```
 
-App available at `http://localhost:<port>` (printed by Flutter)
+App available at `http://localhost:4200`
 
 ### 4. Android setup
 
@@ -118,6 +123,7 @@ my-second-memory/
 | PUT | `/api/items/{id}` | Update item |
 | DELETE | `/api/items/{id}` | Delete item |
 | POST | `/api/chat` | AI assistant (SSE streaming) |
+| GET | `/api/proxy/image?url=...` | Image proxy (bypasses CDN CORS on web) |
 
 ## Frontend Development
 
@@ -150,7 +156,7 @@ A `docker-compose-debug.yml` override enables `debugpy` remote debugging on port
 docker compose -f docker-compose.yml -f docker-compose-debug.yml up -d --build
 ```
 
-The backend **blocks at startup** and waits for a debugger to attach before serving any requests.
+The backend starts normally and serves requests immediately. Attach the debugger at any time.
 
 ### Attach from VS Code
 

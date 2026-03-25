@@ -21,8 +21,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY pyproject.toml uv.lock* ./
 RUN uv sync --no-dev
 
-# Pre-download the embedding model so it's baked into the image
-RUN uv run python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
+# Install debugpy into the venv directly (kept outside pyproject.toml to
+# avoid lock-file drift that triggers a full uv re-resolution at runtime)
+RUN uv pip install --python /opt/venv debugpy
 
 COPY . .
 

@@ -11,7 +11,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Backend
 
 ```bash
-# Start all services (first time: builds image, ~5 min for sentence-transformers)
+# Start all services (first build is fast — no local model download)
 docker compose up -d --build
 
 # Run DB migrations (required after first build or new migration)
@@ -88,7 +88,7 @@ Layered architecture: **Router → Service → Repository → DB**
 **Key services:**
 - `metadata_extractor.py` — detects URL type (YouTube/Instagram/article/link), extracts raw metadata using `yt-dlp` (YouTube/Instagram), `trafilatura` (articles), or `BeautifulSoup4` (OpenGraph fallback)
 - `ai_service.py` — LangChain + Groq (`qwen/qwen3-32b`) with `.with_structured_output()` to generate refined title, 2–3 sentence summary, and 5–8 tags from raw metadata
-- `embedding_service.py` — singleton wrapping `sentence-transformers/all-MiniLM-L6-v2` (384-dim, loaded at startup via `lifespan` in `main.py`)
+- `embedding_service.py` — singleton using Google AI Studio (`gemini-embedding-001`, 768-dim). `warmup()` is called in `lifespan` to validate the API key at startup. `encode()` uses `RETRIEVAL_QUERY` task type; `encode_for_item()` uses `RETRIEVAL_DOCUMENT`.
 - `search_service.py` — Reciprocal Rank Fusion (RRF, k=60) combining pgvector cosine similarity and PostgreSQL `tsvector` full-text search
 
 **AI chat** (`routers/chat.py`): LangGraph `create_react_agent` with two tools (`search_items_tool`, `list_items_tool`) streamed over SSE. The agent appends `ITEMS_JSON: [...]` at the end of its response; the frontend strips this and renders item widgets.
@@ -98,27 +98,30 @@ Layered architecture: **Router → Service → Repository → DB**
 ### Database schema
 
 Single table `items` with:
-- `embedding VECTOR(384)` — ivfflat cosine index
+- `embedding VECTOR(768)` — ivfflat cosine index
 - `fts_vector TSVECTOR` — generated always from `title + summary + content`, GIN index
 - `tags TEXT[]` — GIN index, queried with `.overlap()`
 - `updated_at` auto-updated via a PostgreSQL trigger
 
-### Frontend (`frontend/src/app/`)
+### Frontend (`frontend/lib/`)
 
-Ionic 8 + Angular 17 **standalone components** (no NgModules). Routes lazy-load each page.
+Flutter + Riverpod + go_router + Material 3. Targets Android (native) and web (Chrome, port 4200).
 
-- `app.config.ts` — bootstraps `IonicRouteStrategy`, `HttpClient`, `Router`
-- `app.component.ts` — calls `ShareService.checkIncomingShare()` on init (Android share intent)
-- `services/api.service.ts` — all HTTP calls + `chatStreamFetch()` async generator for SSE
-- `services/share.service.ts` — reads incoming Android share intent via `send-intent` plugin, navigates to `/add-item?url=...`
-- Chat SSE is consumed with `fetch` + `ReadableStream` (not `EventSource`) since the endpoint requires a POST body
+- `main.dart` — app entry point, sets up `ProviderScope` and `GoRouter`
+- `config/environment.dart` — resolves `baseUrl` (`localhost:8000` on web, `10.0.2.2:8000` on Android emulator)
+- `config/router.dart` — go_router route definitions
+- `services/api_service.dart` — all HTTP calls; `chatStream()` async generator consumes SSE via `fetch` + `ReadableStream`
+- `services/share_service.dart` — reads incoming Android share intent, navigates to `/add-item?url=...`
+- `providers/` — Riverpod providers: `items_provider.dart`, `chat_provider.dart`
+- `utils/image_utils.dart` — `proxyImageUrl()`: routes CDN image URLs through `/api/proxy/image` on web (CORS fix); no-op on Android
+- Chat SSE: the agent appends `ITEMS_JSON: [...]`; the frontend strips it and renders item widgets
 
 ### Key configuration
 
 - `UV_PROJECT_ENVIRONMENT=/opt/venv` — venv lives outside `/app` so the dev volume mount (`./backend:/app`) doesn't clobber it
 - `UV_LINK_MODE=copy` — required on Docker Desktop (different filesystems)
 - `backend/.dockerignore` excludes `.venv/` — critical, a Linux `.venv` left in `backend/` will break the Windows Docker build context
-- Android emulator uses `http://10.0.2.2:8000`; real device needs the host machine's LAN IP in `environment.prod.ts`
+- Android emulator uses `http://10.0.2.2:8000`; real device needs the host machine's LAN IP passed via `--dart-define=BACKEND_URL=http://192.168.x.x:8000`
 
 ### Adding a new LLM provider
 
