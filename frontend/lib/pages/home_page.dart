@@ -142,6 +142,12 @@ class _HomePageState extends ConsumerState<HomePage> {
                           ),
                         ),
                         IconButton(
+                          icon: const Icon(Icons.label_outline_rounded,
+                              color: AppColors.primary, size: 24),
+                          onPressed: () => context.push('/tags'),
+                          tooltip: 'Manage Tags',
+                        ),
+                        IconButton(
                           icon: const Icon(Icons.chat_bubble_outline_rounded,
                               color: AppColors.primary, size: 24),
                           onPressed: () => context.push('/chat'),

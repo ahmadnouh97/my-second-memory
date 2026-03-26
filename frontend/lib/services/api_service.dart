@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import '../config/environment.dart';
 import '../models/chat_message.dart';
 import '../models/item.dart';
+import '../models/tag.dart';
 
 class ApiException implements Exception {
   final int? statusCode;
@@ -174,6 +175,32 @@ class ApiService {
   }
 
   Future<void> deleteItem(String id) => _delete('/api/items/$id');
+
+  // ── Tags ───────────────────────────────────────────────────────────────────
+
+  Future<List<TagCount>> getTags() async {
+    final res = await _client.get(
+      _uri('/api/tags'),
+      headers: {'Content-Type': 'application/json'},
+    );
+    _check(res);
+    final list = jsonDecode(res.body) as List<dynamic>;
+    return list.map((e) => TagCount.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  Future<ConsolidateResponse> previewConsolidate({double? threshold}) async {
+    final json = await _post('/api/tags/consolidate/preview', {
+      if (threshold != null) 'threshold': threshold,
+    });
+    return ConsolidateResponse.fromJson(json);
+  }
+
+  Future<ConsolidateResponse> applyConsolidate({double? threshold}) async {
+    final json = await _post('/api/tags/consolidate', {
+      if (threshold != null) 'threshold': threshold,
+    });
+    return ConsolidateResponse.fromJson(json);
+  }
 
   // ── Chat SSE ───────────────────────────────────────────────────────────────
 

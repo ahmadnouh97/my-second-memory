@@ -158,6 +158,11 @@ class ItemsNotifier extends StateNotifier<ItemsState> {
     }
   }
 
+  Future<void> resetAndReload() async {
+    state = const ItemsState();
+    await loadInitial();
+  }
+
   void removeItem(String id) {
     state = state.copyWith(
       items: state.items.where((i) => i.id != id).toList(),

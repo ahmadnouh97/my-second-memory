@@ -4,6 +4,7 @@ import '../pages/add_item_page.dart';
 import '../pages/chat_page.dart';
 import '../pages/home_page.dart';
 import '../pages/item_detail_page.dart';
+import '../pages/tags_page.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/home',
@@ -29,6 +30,10 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/chat',
       builder: (ctx, state) => const ChatPage(),
+    ),
+    GoRoute(
+      path: '/tags',
+      builder: (ctx, state) => const TagsPage(),
     ),
   ],
 );
