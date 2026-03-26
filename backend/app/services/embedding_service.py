@@ -37,6 +37,45 @@ class EmbeddingService:
         )
         return result.embeddings[0].values
 
+    async def encode_tags(self, tags: list[str]) -> list[list[float]]:
+        """Encode tags for save-time dedup storage. Uses RETRIEVAL_DOCUMENT task type.
+        Makes individual calls in parallel — more reliable than batch with this SDK."""
+        if not tags:
+            return []
+        results = await asyncio.gather(*[
+            asyncio.to_thread(
+                self._client.models.embed_content,
+                model=EMBEDDING_MODEL,
+                contents=tag,
+                config=types.EmbedContentConfig(
+                    task_type="RETRIEVAL_DOCUMENT",
+                    output_dimensionality=EMBEDDING_DIM,
+                ),
+            )
+            for tag in tags
+        ])
+        return [r.embeddings[0].values for r in results]
+
+    async def encode_for_similarity(self, tags: list[str]) -> list[list[float]]:
+        """Encode tags for symmetric similarity comparison (consolidation).
+        Uses SEMANTIC_SIMILARITY task type — correct for tag-to-tag comparison.
+        Makes individual calls in parallel."""
+        if not tags:
+            return []
+        results = await asyncio.gather(*[
+            asyncio.to_thread(
+                self._client.models.embed_content,
+                model=EMBEDDING_MODEL,
+                contents=tag,
+                config=types.EmbedContentConfig(
+                    task_type="SEMANTIC_SIMILARITY",
+                    output_dimensionality=EMBEDDING_DIM,
+                ),
+            )
+            for tag in tags
+        ])
+        return [r.embeddings[0].values for r in results]
+
     async def encode_for_item(self, title: str, summary: str | None) -> list[float]:
         """Encode an item for storage. Uses RETRIEVAL_DOCUMENT task type."""
         text = title if not summary else f"{title}. {summary}"

@@ -9,6 +9,8 @@ class Settings(BaseSettings):
     google_api_key: str
     app_env: str = "development"
     cors_origins: str = "http://localhost:8100,http://localhost:4200"
+    tag_normalize_threshold: float = 0.88
+    tag_consolidate_threshold: float = 0.85
 
     @property
     def cors_origins_list(self) -> list[str]:
