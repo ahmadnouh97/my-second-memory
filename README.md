@@ -5,11 +5,12 @@ A personal content curation app that saves, organizes, and lets you query everyt
 ## Features
 
 - **Smart saving**: Paste or share any URL → AI extracts title, generates summary + tags
+- **Semantic tag deduplication**: Tags are automatically snapped to existing canonical tags at save time; a consolidation UI lets you merge similar tags across your whole collection
 - **Android share intent**: Share directly from any Android app
 - **Hybrid search**: Semantic (vector) + full-text search combined with RRF
 - **Filter**: By tags, content type, and date
 - **AI assistant**: Ask natural language questions, get answers with clickable item widgets
-- **Fully self-hosted**: Docker Compose, no external dependencies except Groq API
+- **Fully self-hosted**: Docker Compose, no external dependencies except Groq API and Google AI Studio
 
 ## Tech Stack
 
@@ -30,6 +31,10 @@ cp .env.example .env
 # Edit .env and set:
 #   GROQ_API_KEY=your_groq_key_here
 #   GOOGLE_API_KEY=your_google_ai_studio_key_here
+#
+# Optional — tag deduplication thresholds (defaults shown):
+#   TAG_NORMALIZE_THRESHOLD=0.88   # save-time snap threshold
+#   TAG_CONSOLIDATE_THRESHOLD=0.85 # consolidation threshold
 ```
 
 ### 2. Start the backend
@@ -92,20 +97,22 @@ my-second-memory/
 │       │   ├── metadata_extractor.py
 │       │   ├── ai_service.py
 │       │   ├── embedding_service.py
-│       │   └── search_service.py
+│       │   ├── search_service.py
+│       │   └── tag_dedup_service.py  # Semantic tag deduplication
 │       └── routers/
 │           ├── items.py      # CRUD + search
-│           └── chat.py       # AI assistant (SSE)
+│           ├── chat.py       # AI assistant (SSE)
+│           └── tags.py       # Tag listing + consolidation
 └── frontend/                 # Flutter app
     ├── lib/
     │   ├── main.dart
     │   ├── config/           # environment.dart, router.dart
-    │   ├── models/           # Item, ChatMessage (Freezed)
+    │   ├── models/           # Item, ChatMessage, Tag (Freezed)
     │   ├── services/         # api_service.dart, share_service.dart
-    │   ├── providers/        # Riverpod: items_provider, chat_provider
+    │   ├── providers/        # Riverpod: items_provider, chat_provider, tags_provider
     │   ├── theme/            # app_theme.dart (Material 3 dark)
     │   ├── widgets/          # item_card, filter_bar, chat_item_card, …
-    │   └── pages/            # home, add_item, item_detail, chat
+    │   └── pages/            # home, add_item, item_detail, chat, tags
     ├── assets/
     │   └── logo.svg          # App logo (also used as launcher icon)
     └── android/
@@ -124,6 +131,9 @@ my-second-memory/
 | DELETE | `/api/items/{id}` | Delete item |
 | POST | `/api/chat` | AI assistant (SSE streaming) |
 | GET | `/api/proxy/image?url=...` | Image proxy (bypasses CDN CORS on web) |
+| GET | `/api/tags` | List all tags with usage counts |
+| POST | `/api/tags/consolidate/preview` | Preview tag merge plan (no changes applied) |
+| POST | `/api/tags/consolidate` | Apply tag consolidation across all items |
 
 ## Frontend Development
 
