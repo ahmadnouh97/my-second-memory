@@ -169,6 +169,15 @@ class ItemsNotifier extends StateNotifier<ItemsState> {
     );
   }
 
+  void updateItemInList(Item updated) {
+    final updatedItems =
+        state.items.map((i) => i.id == updated.id ? updated : i).toList();
+    state = state.copyWith(
+      items: updatedItems,
+      availableTags: _extractTags(updatedItems),
+    );
+  }
+
   Future<void> deleteItem(String id) async {
     removeItem(id);
     try {

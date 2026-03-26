@@ -84,6 +84,7 @@ class _ItemDetailPageState extends ConsumerState<ItemDetailPage> {
             : _summaryController.text.trim(),
         tags: _editTags,
       );
+      ref.read(itemsProvider.notifier).updateItemInList(updated);
       setState(() {
         _item = updated;
         _editing = false;

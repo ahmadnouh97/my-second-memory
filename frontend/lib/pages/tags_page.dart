@@ -60,7 +60,7 @@ class _TagsPageState extends ConsumerState<TagsPage> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha:0.2),
+                  color: AppColors.primary.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -176,54 +176,67 @@ class _ConsolidationSection extends ConsumerWidget {
               activeTrackColor: AppColors.primary,
               thumbColor: AppColors.primaryLight,
               inactiveTrackColor: AppColors.border,
-              overlayColor: AppColors.primary.withValues(alpha:0.15),
+              overlayColor: AppColors.primary.withValues(alpha: 0.15),
             ),
             child: Slider(
               value: threshold,
               min: 0.5,
               max: 1.0,
               divisions: 50,
-              onChanged: onThresholdChanged,
+              onChanged: state.preview == null ? onThresholdChanged : null,
             ),
           ),
           Row(
             children: [
-              Text('More merges', style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
+              Text('More merges',
+                  style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
               const Spacer(),
-              Text('Fewer merges', style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
+              Text('Fewer merges',
+                  style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
             ],
           ),
           const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: state.isLoadingPreview || state.isApplying
-                  ? null
-                  : () => ref
-                      .read(tagsProvider.notifier)
-                      .previewConsolidate(threshold),
-              icon: state.isLoadingPreview
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.search),
-              label: const Text('Find Duplicates'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.primaryLight,
-                side: const BorderSide(color: AppColors.primary),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: state.isLoadingPreview || state.isApplying
+                      ? null
+                      : () => ref
+                          .read(tagsProvider.notifier)
+                          .previewConsolidate(threshold),
+                  icon: state.isLoadingPreview
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.search),
+                  label: const Text('Find Duplicates'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primaryLight,
+                    side: const BorderSide(color: AppColors.primary),
+                  ),
+                ),
               ),
-            ),
+              if (state.preview != null) ...[
+                const SizedBox(width: 8),
+                OutlinedButton(
+                  onPressed: state.isApplying
+                      ? null
+                      : () => ref.read(tagsProvider.notifier).clearPreview(),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.textSecondary,
+                    side: const BorderSide(color: AppColors.border),
+                  ),
+                  child: const Text('Clear'),
+                ),
+              ],
+            ],
           ),
           if (state.preview != null) ...[
             const SizedBox(height: 16),
-            _PreviewResults(
-              preview: state.preview!,
-              isApplying: state.isApplying,
-              onApply: () =>
-                  ref.read(tagsProvider.notifier).applyConsolidate(threshold),
-            ),
+            _PreviewResults(isApplying: state.isApplying),
           ],
         ],
       ),
@@ -233,32 +246,31 @@ class _ConsolidationSection extends ConsumerWidget {
 
 // ── Preview results ───────────────────────────────────────────────────────────
 
-class _PreviewResults extends StatelessWidget {
-  const _PreviewResults({
-    required this.preview,
-    required this.isApplying,
-    required this.onApply,
-  });
+class _PreviewResults extends ConsumerWidget {
+  const _PreviewResults({required this.isApplying});
 
-  final ConsolidateResponse preview;
   final bool isApplying;
-  final VoidCallback onApply;
 
   @override
-  Widget build(BuildContext context) {
-    if (preview.groups.isEmpty) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final groups = ref.watch(tagsProvider.select((s) => s.editableGroups));
+    final preview = ref.watch(tagsProvider.select((s) => s.preview));
+
+    if (preview == null) return const SizedBox.shrink();
+
+    if (groups.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: AppColors.success.withValues(alpha:0.1),
+          color: AppColors.success.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.success.withValues(alpha:0.3)),
+          border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
         ),
-        child: Row(
+        child: const Row(
           children: [
-            const Icon(Icons.check_circle_outline, color: AppColors.success, size: 18),
-            const SizedBox(width: 8),
-            const Text(
+            Icon(Icons.check_circle_outline, color: AppColors.success, size: 18),
+            SizedBox(width: 8),
+            Text(
               'No duplicate tags found.',
               style: TextStyle(color: AppColors.success),
             ),
@@ -267,13 +279,22 @@ class _PreviewResults extends StatelessWidget {
       );
     }
 
+    final activeCount = groups.where((g) => g.willApply).length;
+    final activeTagsRemoved =
+        groups.where((g) => g.willApply).fold<int>(0, (s, g) => s + g.activeMerged.length);
+    final tagsAfter = preview.totalTagsBefore - activeTagsRemoved;
+
+    // Disabled when no active groups, or any active group has empty canonical
+    final hasEmptyCanonical = groups.any((g) => g.willApply && g.canonical.isEmpty);
+    final canApply = activeCount > 0 && !hasEmptyCanonical;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
             Text(
-              '${preview.groups.length} group${preview.groups.length == 1 ? '' : 's'} found',
+              '$activeCount of ${groups.length} group${groups.length == 1 ? '' : 's'} selected',
               style: const TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 13,
@@ -282,18 +303,20 @@ class _PreviewResults extends StatelessWidget {
             ),
             const Spacer(),
             Text(
-              '${preview.totalTagsBefore} → ${preview.totalTagsAfter} tags',
+              '${preview.totalTagsBefore} → $tagsAfter tags',
               style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
             ),
           ],
         ),
         const SizedBox(height: 8),
-        ...preview.groups.map((g) => _MergeGroupCard(group: g)),
+        ...List.generate(groups.length, (i) => _MergeGroupCard(groupIndex: i)),
         const SizedBox(height: 12),
         SizedBox(
           width: double.infinity,
           child: FilledButton.icon(
-            onPressed: isApplying ? null : onApply,
+            onPressed: (isApplying || !canApply)
+                ? null
+                : () => ref.read(tagsProvider.notifier).applyConsolidate(),
             icon: isApplying
                 ? const SizedBox(
                     width: 16,
@@ -313,74 +336,220 @@ class _PreviewResults extends StatelessWidget {
   }
 }
 
-class _MergeGroupCard extends StatelessWidget {
-  const _MergeGroupCard({required this.group});
+// ── Merge group card ──────────────────────────────────────────────────────────
 
-  final MergeGroup group;
+class _MergeGroupCard extends ConsumerWidget {
+  const _MergeGroupCard({required this.groupIndex});
+
+  final int groupIndex;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final group = ref.watch(
+      tagsProvider.select((s) => s.editableGroups[groupIndex]),
+    );
+    final notifier = ref.read(tagsProvider.notifier);
+
+    return Opacity(
+      opacity: group.isEnabled ? 1.0 : 0.45,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceElevated,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Checkbox(
+                  value: group.isEnabled,
+                  onChanged: (_) => notifier.toggleGroup(groupIndex),
+                  activeColor: AppColors.primary,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  visualDensity: VisualDensity.compact,
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: _CanonicalTextField(groupIndex: groupIndex),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '${group.itemsAffected} item${group.itemsAffected == 1 ? '' : 's'}',
+                  style: const TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              children: group.selectedMerged.entries
+                  .map((e) => _MergeTagChip(
+                        tag: e.key,
+                        isSelected: e.value,
+                        groupEnabled: group.isEnabled,
+                        onToggle: () =>
+                            notifier.toggleMergedTag(groupIndex, e.key),
+                      ))
+                  .toList(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Canonical text field ──────────────────────────────────────────────────────
+
+class _CanonicalTextField extends ConsumerStatefulWidget {
+  const _CanonicalTextField({required this.groupIndex});
+
+  final int groupIndex;
+
+  @override
+  ConsumerState<_CanonicalTextField> createState() =>
+      _CanonicalTextFieldState();
+}
+
+class _CanonicalTextFieldState extends ConsumerState<_CanonicalTextField> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    final group = ref.read(tagsProvider).editableGroups[widget.groupIndex];
+    _controller = TextEditingController(text: group.canonical);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceElevated,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.border),
+    final group = ref.watch(
+      tagsProvider.select((s) => s.editableGroups[widget.groupIndex]),
+    );
+
+    // Sync controller only when canonical was reset externally (e.g. re-preview).
+    // This avoids cursor-jump on every keystroke.
+    if (_controller.text != group.canonical &&
+        group.canonical == group.originalCanonical) {
+      _controller.text = group.canonical;
+    }
+
+    return TextField(
+      controller: _controller,
+      enabled: group.isEnabled,
+      style: const TextStyle(
+        color: AppColors.primaryLight,
+        fontWeight: FontWeight.w600,
+        fontSize: 14,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.label, color: AppColors.primaryLight, size: 16),
-              const SizedBox(width: 6),
-              Text(
-                group.canonical,
-                style: const TextStyle(
-                  color: AppColors.primaryLight,
-                  fontWeight: FontWeight.w600,
+      decoration: InputDecoration(
+        isDense: true,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        hintText: group.isRenamed ? 'suggested: ${group.originalCanonical}' : null,
+        hintStyle: const TextStyle(
+          color: AppColors.textMuted,
+          fontSize: 12,
+          fontStyle: FontStyle.italic,
+          fontWeight: FontWeight.normal,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(6),
+          borderSide: const BorderSide(color: AppColors.border),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(6),
+          borderSide: const BorderSide(color: AppColors.primary),
+        ),
+        disabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(6),
+          borderSide: const BorderSide(color: AppColors.border),
+        ),
+      ),
+      onChanged: (val) =>
+          ref.read(tagsProvider.notifier).renameCanonical(widget.groupIndex, val),
+    );
+  }
+}
+
+// ── Merge tag chip ────────────────────────────────────────────────────────────
+
+class _MergeTagChip extends StatelessWidget {
+  const _MergeTagChip({
+    required this.tag,
+    required this.isSelected,
+    required this.groupEnabled,
+    required this.onToggle,
+  });
+
+  final String tag;
+  final bool isSelected;
+  final bool groupEnabled;
+  final VoidCallback onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = isSelected ? AppColors.error : AppColors.textMuted;
+    final bgColor = isSelected
+        ? AppColors.error.withValues(alpha: 0.12)
+        : Colors.transparent;
+    final borderColor = isSelected
+        ? AppColors.error.withValues(alpha: 0.3)
+        : AppColors.border;
+
+    return GestureDetector(
+      onTap: groupEnabled ? onToggle : null,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: borderColor),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (groupEnabled) ...[
+              SizedBox(
+                width: 14,
+                height: 14,
+                child: Checkbox(
+                  value: isSelected,
+                  onChanged: (_) => onToggle(),
+                  activeColor: AppColors.error,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  visualDensity: VisualDensity.compact,
                 ),
               ),
-              const Spacer(),
-              Text(
-                '${group.itemsAffected} item${group.itemsAffected == 1 ? '' : 's'}',
-                style: const TextStyle(
-                  color: AppColors.textMuted,
-                  fontSize: 12,
-                ),
-              ),
+              const SizedBox(width: 4),
             ],
-          ),
-          const SizedBox(height: 6),
-          Wrap(
-            spacing: 6,
-            runSpacing: 4,
-            children: [
-              const Text(
-                'merges:',
-                style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+            Text(
+              tag,
+              style: TextStyle(
+                color: color,
+                fontSize: 12,
+                decoration: (!isSelected && groupEnabled)
+                    ? TextDecoration.lineThrough
+                    : null,
+                decorationColor: AppColors.textMuted,
               ),
-              ...group.merged.map(
-                (t) => Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: AppColors.error.withValues(alpha:0.12),
-                    borderRadius: BorderRadius.circular(4),
-                    border: Border.all(color: AppColors.error.withValues(alpha:0.3)),
-                  ),
-                  child: Text(
-                    t,
-                    style: const TextStyle(
-                      color: AppColors.error,
-                      fontSize: 12,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -413,7 +582,7 @@ class _TagCountChip extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
             decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha:0.2),
+              color: AppColors.primary.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(

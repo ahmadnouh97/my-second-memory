@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../models/editable_group.dart';
 import '../models/tag.dart';
 import '../providers/items_provider.dart';
 import '../services/api_service.dart';
@@ -10,6 +11,7 @@ class TagsState {
   const TagsState({
     this.tags = const [],
     this.preview,
+    this.editableGroups = const [],
     this.isLoadingTags = false,
     this.isLoadingPreview = false,
     this.isApplying = false,
@@ -19,6 +21,7 @@ class TagsState {
 
   final List<TagCount> tags;
   final ConsolidateResponse? preview;
+  final List<EditableGroup> editableGroups;
   final bool isLoadingTags;
   final bool isLoadingPreview;
   final bool isApplying;
@@ -28,6 +31,7 @@ class TagsState {
   TagsState copyWith({
     List<TagCount>? tags,
     ConsolidateResponse? Function()? preview,
+    List<EditableGroup>? editableGroups,
     bool? isLoadingTags,
     bool? isLoadingPreview,
     bool? isApplying,
@@ -37,6 +41,7 @@ class TagsState {
       TagsState(
         tags: tags ?? this.tags,
         preview: preview != null ? preview() : this.preview,
+        editableGroups: editableGroups ?? this.editableGroups,
         isLoadingTags: isLoadingTags ?? this.isLoadingTags,
         isLoadingPreview: isLoadingPreview ?? this.isLoadingPreview,
         isApplying: isApplying ?? this.isApplying,
@@ -70,15 +75,52 @@ class TagsNotifier extends StateNotifier<TagsState> {
     }
   }
 
+  void _initEditableGroups(ConsolidateResponse response) {
+    final groups = response.groups.map((g) {
+      return EditableGroup(
+        originalCanonical: g.canonical,
+        canonical: g.canonical,
+        selectedMerged: {for (final tag in g.merged) tag: true},
+        isEnabled: true,
+        itemsAffected: g.itemsAffected,
+      );
+    }).toList();
+    state = state.copyWith(editableGroups: groups);
+  }
+
+  void toggleGroup(int index) {
+    final groups = List<EditableGroup>.from(state.editableGroups);
+    groups[index] = groups[index].copyWith(isEnabled: !groups[index].isEnabled);
+    state = state.copyWith(editableGroups: groups);
+  }
+
+  void renameCanonical(int index, String newName) {
+    final trimmed = newName.trim();
+    final groups = List<EditableGroup>.from(state.editableGroups);
+    groups[index] = groups[index].copyWith(canonical: trimmed);
+    state = state.copyWith(editableGroups: groups);
+  }
+
+  void toggleMergedTag(int groupIndex, String tag) {
+    final groups = List<EditableGroup>.from(state.editableGroups);
+    final group = groups[groupIndex];
+    final updated = Map<String, bool>.from(group.selectedMerged);
+    updated[tag] = !(updated[tag] ?? true);
+    groups[groupIndex] = group.copyWith(selectedMerged: updated);
+    state = state.copyWith(editableGroups: groups);
+  }
+
   Future<void> previewConsolidate(double? threshold) async {
     state = state.copyWith(
       isLoadingPreview: true,
       error: () => null,
       preview: () => null,
+      editableGroups: const [],
     );
     try {
       final response = await _api.previewConsolidate(threshold: threshold);
       state = state.copyWith(preview: () => response, isLoadingPreview: false);
+      _initEditableGroups(response);
     } catch (e) {
       state = state.copyWith(
         isLoadingPreview: false,
@@ -87,10 +129,14 @@ class TagsNotifier extends StateNotifier<TagsState> {
     }
   }
 
-  Future<void> applyConsolidate(double? threshold) async {
+  Future<void> applyConsolidate() async {
+    final activeGroups =
+        state.editableGroups.where((g) => g.willApply).toList();
+    if (activeGroups.isEmpty) return;
+
     state = state.copyWith(isApplying: true, error: () => null);
     try {
-      final response = await _api.applyConsolidate(threshold: threshold);
+      final response = await _api.applyConsolidate(groups: activeGroups);
       final mergedCount = response.groups.fold<int>(
         0,
         (sum, g) => sum + g.merged.length,
@@ -102,6 +148,7 @@ class TagsNotifier extends StateNotifier<TagsState> {
       state = state.copyWith(
         tags: freshTags,
         preview: () => null,
+        editableGroups: const [],
         isApplying: false,
         successMessage: () => mergedCount > 0
             ? 'Merged $mergedCount tag${mergedCount == 1 ? '' : 's'} into ${response.groups.length} group${response.groups.length == 1 ? '' : 's'}.'
@@ -119,7 +166,7 @@ class TagsNotifier extends StateNotifier<TagsState> {
   }
 
   void clearPreview() {
-    state = state.copyWith(preview: () => null);
+    state = state.copyWith(preview: () => null, editableGroups: const []);
   }
 
   void clearMessages() {

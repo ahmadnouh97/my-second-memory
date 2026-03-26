@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 
 import '../config/environment.dart';
 import '../models/chat_message.dart';
+import '../models/editable_group.dart';
 import '../models/item.dart';
 import '../models/tag.dart';
 
@@ -195,9 +196,11 @@ class ApiService {
     return ConsolidateResponse.fromJson(json);
   }
 
-  Future<ConsolidateResponse> applyConsolidate({double? threshold}) async {
+  Future<ConsolidateResponse> applyConsolidate({
+    required List<EditableGroup> groups,
+  }) async {
     final json = await _post('/api/tags/consolidate', {
-      if (threshold != null) 'threshold': threshold,
+      'groups': groups.map((g) => g.toApiJson()).toList(),
     });
     return ConsolidateResponse.fromJson(json);
   }
