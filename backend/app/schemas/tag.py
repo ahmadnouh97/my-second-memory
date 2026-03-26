@@ -25,3 +25,12 @@ class ConsolidateResponse(BaseModel):
     groups: list[MergeGroup]
     total_tags_before: int
     total_tags_after: int
+
+
+class MergeGroupInput(BaseModel):
+    canonical: str
+    merged: list[str]
+
+
+class ApplyConsolidateRequest(BaseModel):
+    groups: list[MergeGroupInput]

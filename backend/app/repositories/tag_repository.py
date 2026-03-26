@@ -66,11 +66,12 @@ class TagRepository:
         embedding_str = f"[{','.join(str(v) for v in embedding)}]"
         result = await self.db.execute(
             text(
-                "SELECT tag, 1 - (embedding <=> :query_vec::vector) AS similarity "
+                "SELECT tag, 1 - (embedding <=> CAST(:query_vec AS vector)) AS similarity "
                 "FROM tag_embeddings "
-                "WHERE 1 - (embedding <=> :query_vec::vector) > :threshold "
-                "ORDER BY embedding <=> :query_vec::vector "
+                "WHERE 1 - (embedding <=> CAST(:query_vec AS vector)) > :threshold "
+                "ORDER BY embedding <=> CAST(:query_vec AS vector) "
                 "LIMIT :limit"
-            ).bindparams(query_vec=embedding_str, threshold=threshold, limit=limit)
+            ),
+            {"query_vec": embedding_str, "threshold": threshold, "limit": limit},
         )
         return [(row.tag, row.similarity) for row in result.all()]

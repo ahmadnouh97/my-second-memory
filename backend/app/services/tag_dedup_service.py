@@ -199,6 +199,27 @@ class TagDedupService:
 
         return report
 
+    async def apply_plan(self, groups: list[dict]) -> list[dict]:
+        """
+        Apply a user-edited merge plan directly without re-running embedding or clustering.
+        Each group is a dict with 'canonical' (str) and 'merged' (list[str]).
+        Returns the same groups enriched with items_affected.
+        """
+        report: list[dict] = []
+        for group in groups:
+            canonical = group["canonical"]
+            to_merge = group["merged"]
+            if not to_merge:
+                continue
+            count_result = await self._repo.db.execute(
+                select(func.count()).select_from(Item).where(Item.tags.overlap(to_merge))
+            )
+            items_affected = count_result.scalar_one()
+            await self._apply_merge(canonical, to_merge)
+            report.append({"canonical": canonical, "merged": to_merge, "items_affected": items_affected})
+        await self._repo.prune_orphans()
+        return report
+
     async def _apply_merge(self, canonical: str, to_merge: list[str]) -> None:
         """Replace all merged tags with the canonical tag and deduplicate."""
         for old_tag in to_merge:

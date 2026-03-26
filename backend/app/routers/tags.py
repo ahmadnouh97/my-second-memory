@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.repositories.tag_repository import TagRepository
-from app.schemas.tag import ConsolidateRequest, ConsolidateResponse, MergeGroup, TagCount
+from app.schemas.tag import ApplyConsolidateRequest, ConsolidateRequest, ConsolidateResponse, MergeGroup, TagCount
 from app.services.embedding_service import embedding_service
 from app.services.tag_dedup_service import TagDedupService
 
@@ -48,9 +48,9 @@ async def preview_consolidate(
 
 @router.post("/consolidate", response_model=ConsolidateResponse)
 async def apply_consolidate(
-    body: ConsolidateRequest, db: AsyncSession = Depends(get_db)
+    body: ApplyConsolidateRequest, db: AsyncSession = Depends(get_db)
 ):
-    """Apply tag consolidation, merging semantically similar tags across all items."""
+    """Apply a user-edited tag consolidation plan."""
     tag_repo = TagRepository(db)
     svc = TagDedupService(tag_repo, embedding_service)
 
@@ -59,7 +59,8 @@ async def apply_consolidate(
     )
     total_before = total_before_result.scalar_one()
 
-    groups = await svc.consolidate_tags(threshold=body.threshold, dry_run=False)
+    plan = [{"canonical": g.canonical, "merged": g.merged} for g in body.groups]
+    groups = await svc.apply_plan(plan)
     merged_count = sum(len(g["merged"]) for g in groups)
 
     return ConsolidateResponse(
