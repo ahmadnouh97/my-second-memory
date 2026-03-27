@@ -87,23 +87,19 @@ Layered architecture: **Router → Service → Repository → DB**
 
 **Key services:**
 - `metadata_extractor.py` — detects URL type (YouTube/Instagram/LinkedIn/GitHub/Facebook/TikTok/Reddit/other), extracts raw metadata using `yt-dlp` (YouTube/Instagram/TikTok), or `BeautifulSoup4` (OpenGraph fallback for all others)
-- `ai_service.py` — LangChain + Groq (`qwen/qwen3-32b`) with `.with_structured_output()` to generate refined title, 2–3 sentence summary, and 5–8 tags from raw metadata
-- `embedding_service.py` — singleton using Google AI Studio (`gemini-embedding-001`, 768-dim). `warmup()` is called in `lifespan` to validate the API key at startup. `encode()` uses `RETRIEVAL_QUERY` task type; `encode_for_item()` uses `RETRIEVAL_DOCUMENT`; `encode_tags()` batch-embeds tags using `RETRIEVAL_DOCUMENT`.
+- `ai_service.py` — LangChain + Groq (`qwen/qwen3-32b`) with `.with_structured_output()` to generate refined title, 2–3 sentence summary, and 5–8 tags from raw metadata. At extract time, receives the current distinct tag list from the DB and includes it in the prompt so the LLM reuses existing tags where they fit.
+- `embedding_service.py` — singleton using Google AI Studio (`gemini-embedding-001`, 768-dim). `warmup()` is called in `lifespan` to validate the API key at startup. `encode()` uses `RETRIEVAL_QUERY` task type; `encode_for_item()` uses `RETRIEVAL_DOCUMENT`.
 - `search_service.py` — Reciprocal Rank Fusion (RRF, k=60) combining pgvector cosine similarity and PostgreSQL `tsvector` full-text search
-- `tag_dedup_service.py` — semantic tag deduplication. `normalize_tags()` snaps new tags to existing canonical tags at save time (threshold configurable via `TAG_NORMALIZE_THRESHOLD`). `consolidate_tags()` clusters all tags by embedding similarity and merges duplicates across items (threshold via `TAG_CONSOLIDATE_THRESHOLD`). `backfill_tag_embeddings()` pre-populates embeddings for existing tags before consolidation.
 
 **AI chat** (`routers/chat.py`): LangGraph `create_react_agent` with two tools (`search_items_tool`, `list_items_tool`) streamed over SSE. The agent appends `ITEMS_JSON: [...]` at the end of its response; the frontend strips this and renders item widgets.
 
-**Save flow:** `POST /api/items/extract` (preview only, not saved) → user edits → `POST /api/items` (saves + generates embedding).
+**Save flow:** `POST /api/items/extract` (fetches existing tags, passes to AI for context, returns preview — not saved) → user edits → `POST /api/items` (saves + generates embedding).
+
+**Tag management** (`routers/tags.py`): `GET /api/tags` lists all tags with counts. `PATCH /api/tags/{tag}` renames a tag across all items via `array_replace`. `DELETE /api/tags/{tag}` removes a tag from all items via `array_remove`.
 
 ### Database schema
 
-Two tables:
-
-`tag_embeddings` — cached tag embeddings for deduplication:
-- `tag TEXT PRIMARY KEY`
-- `embedding VECTOR(768)` — ivfflat cosine index (lists=10)
-- `created_at TIMESTAMPTZ`
+One table:
 
 `items` with:
 - `embedding VECTOR(768)` — ivfflat cosine index
@@ -123,7 +119,7 @@ Flutter + Riverpod + go_router + Material 3. Targets Android (native) and web (C
 - `providers/` — Riverpod providers: `items_provider.dart`, `chat_provider.dart`, `tags_provider.dart`
 - `utils/image_utils.dart` — `proxyImageUrl()`: routes CDN image URLs through `/api/proxy/image` on web (CORS fix); no-op on Android
 - Chat SSE: the agent appends `ITEMS_JSON: [...]`; the frontend strips it and renders item widgets
-- Tag consolidation UI at `/tags` — threshold slider, preview merge groups, apply button; after apply, `itemsProvider` is reset and reloaded via `resetAndReload()`
+- Tags page at `/tags` — searchable list of all tags with usage counts; inline Rename dialog and Delete confirmation; after rename/delete, `itemsProvider` is reset and reloaded via `resetAndReload()`
 
 ### Key configuration
 

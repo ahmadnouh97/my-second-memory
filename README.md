@@ -4,8 +4,8 @@ A personal content curation app that saves, organizes, and lets you query everyt
 
 ## Features
 
-- **Smart saving**: Paste or share any URL → AI extracts title, generates summary + tags
-- **Semantic tag deduplication**: Tags are automatically snapped to existing canonical tags at save time; a consolidation UI lets you merge similar tags across your whole collection
+- **Smart saving**: Paste or share any URL → AI extracts title, generates summary + tags (reusing your existing tags where they fit)
+- **Tag management**: View all tags with counts; rename or delete a tag across all items in one click
 - **Android share intent**: Share directly from any Android app
 - **Hybrid search**: Semantic (vector) + full-text search combined with RRF
 - **Filter**: By tags, content type, and date
@@ -31,10 +31,6 @@ cp .env.example .env
 # Edit .env and set:
 #   GROQ_API_KEY=your_groq_key_here
 #   GOOGLE_API_KEY=your_google_ai_studio_key_here
-#
-# Optional — tag deduplication thresholds (defaults shown):
-#   TAG_NORMALIZE_THRESHOLD=0.88   # save-time snap threshold
-#   TAG_CONSOLIDATE_THRESHOLD=0.85 # consolidation threshold
 ```
 
 ### 2. Start the backend
@@ -97,12 +93,11 @@ my-second-memory/
 │       │   ├── metadata_extractor.py
 │       │   ├── ai_service.py
 │       │   ├── embedding_service.py
-│       │   ├── search_service.py
-│       │   └── tag_dedup_service.py  # Semantic tag deduplication
+│       │   └── search_service.py
 │       └── routers/
 │           ├── items.py      # CRUD + search
 │           ├── chat.py       # AI assistant (SSE)
-│           └── tags.py       # Tag listing + consolidation
+│           └── tags.py       # Tag listing, rename, delete
 └── frontend/                 # Flutter app
     ├── lib/
     │   ├── main.dart
@@ -132,8 +127,8 @@ my-second-memory/
 | POST | `/api/chat` | AI assistant (SSE streaming) |
 | GET | `/api/proxy/image?url=...` | Image proxy (bypasses CDN CORS on web) |
 | GET | `/api/tags` | List all tags with usage counts |
-| POST | `/api/tags/consolidate/preview` | Preview tag merge plan (no changes applied) |
-| POST | `/api/tags/consolidate` | Apply tag consolidation across all items |
+| PATCH | `/api/tags/{tag}` | Rename a tag across all items |
+| DELETE | `/api/tags/{tag}` | Remove a tag from all items |
 
 ## Frontend Development
 
