@@ -5,7 +5,6 @@ import 'package:http/http.dart' as http;
 
 import '../config/environment.dart';
 import '../models/chat_message.dart';
-import '../models/editable_group.dart';
 import '../models/item.dart';
 import '../models/tag.dart';
 
@@ -61,6 +60,16 @@ class ApiService {
 
   Future<Map<String, dynamic>> _put(String path, Object body) async {
     final res = await _client.put(
+      _uri(path),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(body),
+    );
+    _check(res);
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> _patch(String path, Object body) async {
+    final res = await _client.patch(
       _uri(path),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode(body),
@@ -189,20 +198,15 @@ class ApiService {
     return list.map((e) => TagCount.fromJson(e as Map<String, dynamic>)).toList();
   }
 
-  Future<ConsolidateResponse> previewConsolidate({double? threshold}) async {
-    final json = await _post('/api/tags/consolidate/preview', {
-      if (threshold != null) 'threshold': threshold,
-    });
-    return ConsolidateResponse.fromJson(json);
+  Future<TagCount> renameTag(String oldTag, String newTag) async {
+    final encoded = Uri.encodeComponent(oldTag);
+    final json = await _patch('/api/tags/$encoded', {'new_name': newTag});
+    return TagCount.fromJson(json);
   }
 
-  Future<ConsolidateResponse> applyConsolidate({
-    required List<EditableGroup> groups,
-  }) async {
-    final json = await _post('/api/tags/consolidate', {
-      'groups': groups.map((g) => g.toApiJson()).toList(),
-    });
-    return ConsolidateResponse.fromJson(json);
+  Future<void> deleteTag(String tag) async {
+    final encoded = Uri.encodeComponent(tag);
+    await _delete('/api/tags/$encoded');
   }
 
   // ── Chat SSE ───────────────────────────────────────────────────────────────
