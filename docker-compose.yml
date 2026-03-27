@@ -34,9 +34,7 @@ services:
       UV_LINK_MODE: copy
     ports:
       - "8001:8001"
-    volumes:
-      - ./backend:/app
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8001
 
 volumes:
   postgres_data:
