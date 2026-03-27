@@ -36,7 +36,7 @@ services:
       - "8001:8001"
     volumes:
       - ./backend:/app
-    command: uv run uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
 
 volumes:
   postgres_data:

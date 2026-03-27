@@ -9,6 +9,7 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 ENV UV_PROJECT_ENVIRONMENT=/opt/venv
 # Use copy mode to avoid hardlink errors across filesystems
 ENV UV_LINK_MODE=copy
+ENV PATH="/opt/venv/bin:$PATH"
 
 # Install system dependencies
 # Note: ffmpeg not needed — yt-dlp is used for metadata only (no download)
@@ -29,4 +30,4 @@ COPY . .
 
 EXPOSE 8001
 
-CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001"]
