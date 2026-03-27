@@ -6,6 +6,7 @@ A personal content curation app that saves, organizes, and lets you query everyt
 
 - **Smart saving**: Paste or share any URL → AI extracts title, generates summary + tags (reusing your existing tags where they fit)
 - **Tag management**: View all tags with counts; rename or delete a tag across all items in one click
+- **Import / Export**: Export your entire collection to JSON or CSV; import from JSON or CSV with duplicate skipping
 - **Android share intent**: Share directly from any Android app
 - **Hybrid search**: Semantic (vector) + full-text search combined with RRF
 - **Filter**: By tags, content type, and date
@@ -121,6 +122,9 @@ my-second-memory/
 | POST | `/api/items` | Save item |
 | GET | `/api/items` | List with filters (tags, type, date, page) |
 | GET | `/api/items/search?q=...` | Hybrid search |
+| GET | `/api/items/export?format=json\|csv` | Export all items as a file download |
+| POST | `/api/items/import` | Import items from JSON or CSV (skips duplicates) |
+| DELETE | `/api/items` | Delete all items |
 | GET | `/api/items/{id}` | Get single item |
 | PUT | `/api/items/{id}` | Update item |
 | DELETE | `/api/items/{id}` | Delete item |

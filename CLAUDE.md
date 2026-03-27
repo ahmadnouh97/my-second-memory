@@ -90,12 +90,16 @@ Layered architecture: **Router → Service → Repository → DB**
 - `ai_service.py` — LangChain + Groq (`qwen/qwen3-32b`) with `.with_structured_output()` to generate refined title, 2–3 sentence summary, and 5–8 tags from raw metadata. At extract time, receives the current distinct tag list from the DB and includes it in the prompt so the LLM reuses existing tags where they fit.
 - `embedding_service.py` — singleton using Google AI Studio (`gemini-embedding-001`, 768-dim). `warmup()` is called in `lifespan` to validate the API key at startup. `encode()` uses `RETRIEVAL_QUERY` task type; `encode_for_item()` uses `RETRIEVAL_DOCUMENT`.
 - `search_service.py` — Reciprocal Rank Fusion (RRF, k=60) combining pgvector cosine similarity and PostgreSQL `tsvector` full-text search
+- `export_service.py` — exports all items as JSON or CSV (`StreamingResponse` with attachment header)
+- `import_service.py` — imports items from JSON or CSV; skips duplicates by URL; returns `ImportResult` with counts and errors
 
 **AI chat** (`routers/chat.py`): LangGraph `create_react_agent` with two tools (`search_items_tool`, `list_items_tool`) streamed over SSE. The agent appends `ITEMS_JSON: [...]` at the end of its response; the frontend strips this and renders item widgets.
 
 **Save flow:** `POST /api/items/extract` (fetches existing tags, passes to AI for context, returns preview — not saved) → user edits → `POST /api/items` (saves + generates embedding).
 
 **Tag management** (`routers/tags.py`): `GET /api/tags` lists all tags with counts. `PATCH /api/tags/{tag}` renames a tag across all items via `array_replace`. `DELETE /api/tags/{tag}` removes a tag from all items via `array_remove`.
+
+**Import/Export** (`routers/items.py`): `GET /api/items/export?format=json|csv` streams all items as a file download. `POST /api/items/import` accepts a JSON or CSV file, skips duplicate URLs, returns counts. `DELETE /api/items` bulk-deletes all items.
 
 ### Database schema
 
@@ -118,6 +122,7 @@ Flutter + Riverpod + go_router + Material 3. Targets Android (native) and web (C
 - `services/share_service.dart` — reads incoming Android share intent, navigates to `/add-item?url=...`
 - `providers/` — Riverpod providers: `items_provider.dart`, `chat_provider.dart`, `tags_provider.dart`
 - `utils/image_utils.dart` — `proxyImageUrl()`: routes CDN image URLs through `/api/proxy/image` on web (CORS fix); no-op on Android
+- `utils/download_utils.dart` — platform-aware file download (`_web.dart` triggers browser download, `_io.dart` saves to device, `_stub.dart` no-op)
 - Chat SSE: the agent appends `ITEMS_JSON: [...]`; the frontend strips it and renders item widgets
 - Tags page at `/tags` — searchable list of all tags with usage counts; inline Rename dialog and Delete confirmation; after rename/delete, `itemsProvider` is reset and reloaded via `resetAndReload()`
 
