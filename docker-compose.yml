@@ -16,8 +16,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
-    networks:
-      - internal
 
   backend:
     build:
@@ -36,19 +34,7 @@ services:
       UV_LINK_MODE: copy
     ports:
       - "8001:8001"
-    labels:
-      - traefik.http.services.backend.loadbalancer.server.port=8001
-    networks:
-      coolify:
-        aliases:
-          - memo-backend
-      internal:
     command: uvicorn app.main:app --host 0.0.0.0 --port 8001
 
 volumes:
   postgres_data:
-
-networks:
-  coolify:
-    external: true
-  internal:
