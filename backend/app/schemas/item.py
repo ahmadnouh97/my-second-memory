@@ -62,3 +62,9 @@ class PaginatedItemsResponse(BaseModel):
     total: int
     page: int
     limit: int
+
+
+class ImportResult(BaseModel):
+    imported: int
+    skipped: int
+    errors: list[str]

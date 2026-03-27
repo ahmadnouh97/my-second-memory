@@ -33,6 +33,20 @@ class ItemRepository:
         result = await self.db.execute(select(Item).where(Item.id == item_id))
         return result.scalar_one_or_none()
 
+    async def get_by_url(self, url: str) -> Item | None:
+        result = await self.db.execute(select(Item).where(Item.url == url))
+        return result.scalar_one_or_none()
+
+    async def list_all(self) -> list[Item]:
+        result = await self.db.execute(select(Item).order_by(Item.created_at.desc()))
+        return list(result.scalars().all())
+
+    async def delete_all(self) -> int:
+        """Delete all items. Returns the number of deleted rows."""
+        result = await self.db.execute(delete(Item))
+        await self.db.commit()
+        return result.rowcount
+
     async def list_filtered(
         self,
         tags: list[str] | None = None,

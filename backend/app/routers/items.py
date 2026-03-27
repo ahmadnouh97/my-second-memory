@@ -1,7 +1,8 @@
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from fastapi.responses import StreamingResponse
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -10,6 +11,7 @@ from app.repositories.item_repository import ItemRepository
 from app.schemas.item import (
     ExtractPreview,
     ExtractRequest,
+    ImportResult,
     ItemCreate,
     ItemResponse,
     ItemUpdate,
@@ -17,6 +19,8 @@ from app.schemas.item import (
 )
 from app.services.ai_service import enrich_metadata
 from app.services.embedding_service import embedding_service
+from app.services.export_service import export_as_csv, export_as_json
+from app.services.import_service import parse_csv, parse_json
 from app.services.metadata_extractor import extract_metadata
 from app.services.search_service import hybrid_search
 
@@ -81,6 +85,80 @@ async def search_items(
     repo = ItemRepository(db)
     results = await hybrid_search(repo, q, tags, content_type, limit)
     return [ItemResponse.model_validate(i) for i in results]
+
+
+@router.get("/export")
+async def export_items(
+    format: str = Query(default="json", pattern="^(json|csv)$"),
+    db: AsyncSession = Depends(get_db),
+):
+    """Export all items as a JSON or CSV file download."""
+    repo = ItemRepository(db)
+    items = await repo.list_all()
+
+    if format == "csv":
+        content = export_as_csv(items)
+        media_type = "text/csv"
+        filename = "items.csv"
+    else:
+        content = export_as_json(items)
+        media_type = "application/json"
+        filename = "items.json"
+
+    return StreamingResponse(
+        iter([content]),
+        media_type=media_type,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.post("/import", response_model=ImportResult)
+async def import_items(
+    format: str = Query(default="json", pattern="^(json|csv)$"),
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+):
+    """Import items from a JSON or CSV file. Duplicate URLs are skipped."""
+    content = (await file.read()).decode("utf-8")
+
+    if format == "csv":
+        items_to_create, parse_errors = parse_csv(content)
+    else:
+        items_to_create, parse_errors = parse_json(content)
+
+    repo = ItemRepository(db)
+    imported = 0
+    skipped = 0
+    errors = list(parse_errors)
+
+    for item_data in items_to_create:
+        if not item_data.url or not item_data.title:
+            errors.append(f"Skipped item with missing url or title: {item_data.url!r}")
+            skipped += 1
+            continue
+
+        existing = await repo.get_by_url(item_data.url)
+        if existing:
+            skipped += 1
+            continue
+
+        try:
+            emb = await embedding_service.encode_for_item(item_data.title, item_data.summary)
+            await repo.create(item_data, embedding=emb)
+            imported += 1
+        except Exception as e:
+            errors.append(f"Failed to save '{item_data.url}': {e}")
+            skipped += 1
+
+    return ImportResult(imported=imported, skipped=skipped, errors=errors)
+
+
+@router.delete("", status_code=200)
+async def clear_all_items(db: AsyncSession = Depends(get_db)):
+    """Delete all items from the database. Returns the count of deleted items."""
+    repo = ItemRepository(db)
+    count = await repo.delete_all()
+    return {"deleted": count}
 
 
 @router.get("/{item_id}", response_model=ItemResponse)
