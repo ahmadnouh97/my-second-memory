@@ -39,8 +39,10 @@ services:
     labels:
       - traefik.http.services.backend.loadbalancer.server.port=8001
     networks:
-      - coolify
-      - internal
+      coolify:
+        aliases:
+          - memo-backend
+      internal:
     command: uvicorn app.main:app --host 0.0.0.0 --port 8001
 
 volumes:
