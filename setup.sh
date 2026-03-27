@@ -17,8 +17,8 @@ docker compose up -d --build
 echo "[2/3] Running database migrations..."
 docker compose exec backend uv run alembic upgrade head
 
-echo "[3/3] Backend ready at http://localhost:8000"
-echo "      API docs at http://localhost:8000/docs"
+echo "[3/3] Backend ready at http://localhost:8001"
+echo "      API docs at http://localhost:8001/docs"
 
 echo ""
 echo "=== Frontend setup ==="

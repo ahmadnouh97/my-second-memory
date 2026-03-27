@@ -44,8 +44,8 @@ docker compose exec backend uv run alembic upgrade head
 docker compose exec backend uv run python scripts/reembed_all.py
 ```
 
-API available at `http://localhost:8000`
-Swagger docs at `http://localhost:8000/docs`
+API available at `http://localhost:8001`
+Swagger docs at `http://localhost:8001/docs`
 
 ### 3. Run the web frontend
 
@@ -66,10 +66,10 @@ flutter run                  # Connected device or emulator
 flutter build apk --release
 ```
 
-> **Android API URL**: The Android app points to `http://10.0.2.2:8000` (emulator localhost).
+> **Android API URL**: The Android app points to `http://10.0.2.2:8001` (emulator localhost).
 > For a real device on the same network, set `BACKEND_URL` at build time:
 > ```bash
-> flutter build apk --dart-define=BACKEND_URL=http://192.168.1.x:8000
+> flutter build apk --dart-define=BACKEND_URL=http://192.168.1.x:8001
 > ```
 
 ## Project Structure

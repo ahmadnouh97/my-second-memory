@@ -33,10 +33,10 @@ services:
       UV_PROJECT_ENVIRONMENT: /opt/venv
       UV_LINK_MODE: copy
     ports:
-      - "8000:8000"
+      - "8001:8001"
     volumes:
       - ./backend:/app
-    command: uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: uv run uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
 
 volumes:
   postgres_data:

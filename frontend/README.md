@@ -31,7 +31,7 @@ flutter run
 flutter build apk --release
 
 # Override backend URL (real device on LAN)
-flutter run --dart-define=BACKEND_URL=http://192.168.1.x:8000
+flutter run --dart-define=BACKEND_URL=http://192.168.1.x:8001
 ```
 
 ## Code Generation

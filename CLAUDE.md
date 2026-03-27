@@ -116,7 +116,7 @@ One table:
 Flutter + Riverpod + go_router + Material 3. Targets Android (native) and web (Chrome, port 4200).
 
 - `main.dart` — app entry point, sets up `ProviderScope` and `GoRouter`
-- `config/environment.dart` — resolves `baseUrl` (`localhost:8000` on web, `10.0.2.2:8000` on Android emulator)
+- `config/environment.dart` — resolves `baseUrl` (`localhost:8001` on web, `10.0.2.2:8001` on Android emulator)
 - `config/router.dart` — go_router route definitions
 - `services/api_service.dart` — all HTTP calls; `chatStream()` async generator consumes SSE via `fetch` + `ReadableStream`
 - `services/share_service.dart` — reads incoming Android share intent, navigates to `/add-item?url=...`
@@ -131,7 +131,7 @@ Flutter + Riverpod + go_router + Material 3. Targets Android (native) and web (C
 - `UV_PROJECT_ENVIRONMENT=/opt/venv` — venv lives outside `/app` so the dev volume mount (`./backend:/app`) doesn't clobber it
 - `UV_LINK_MODE=copy` — required on Docker Desktop (different filesystems)
 - `backend/.dockerignore` excludes `.venv/` — critical, a Linux `.venv` left in `backend/` will break the Windows Docker build context
-- Android emulator uses `http://10.0.2.2:8000`; real device needs the host machine's LAN IP passed via `--dart-define=BACKEND_URL=http://192.168.x.x:8000`
+- Android emulator uses `http://10.0.2.2:8001`; real device needs the host machine's LAN IP passed via `--dart-define=BACKEND_URL=http://192.168.x.x:8001`
 
 ### Adding a new LLM provider
 

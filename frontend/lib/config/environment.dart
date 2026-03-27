@@ -8,6 +8,6 @@ class Environment {
     if (injected.isNotEmpty) return injected;
     // On Android emulator the host machine is reachable via 10.0.2.2.
     // On web (flutter run -d chrome) localhost works fine.
-    return _isRelease ? 'http://10.0.2.2:8000' : 'http://localhost:8000';
+    return _isRelease ? 'http://10.0.2.2:8001' : 'http://localhost:8001';
   }
 }
