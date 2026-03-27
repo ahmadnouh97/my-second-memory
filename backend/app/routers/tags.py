@@ -3,10 +3,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.repositories.tag_repository import TagRepository
-from app.schemas.tag import ApplyConsolidateRequest, ConsolidateRequest, ConsolidateResponse, MergeGroup, TagCount
-from app.services.embedding_service import embedding_service
-from app.services.tag_dedup_service import TagDedupService
+from app.schemas.tag import RenameTagRequest, TagCount
 
 router = APIRouter()
 
@@ -23,48 +20,27 @@ async def list_tags(db: AsyncSession = Depends(get_db)):
     return [TagCount(tag=row.tag, count=row.count) for row in result.all()]
 
 
-@router.post("/consolidate/preview", response_model=ConsolidateResponse)
-async def preview_consolidate(
-    body: ConsolidateRequest, db: AsyncSession = Depends(get_db)
-):
-    """Preview tag consolidation without applying any changes."""
-    tag_repo = TagRepository(db)
-    svc = TagDedupService(tag_repo, embedding_service)
-
-    total_before_result = await db.execute(
-        text("SELECT COUNT(DISTINCT tag) FROM (SELECT unnest(tags) AS tag FROM items) t")
+@router.patch("/{tag}", response_model=TagCount)
+async def rename_tag(tag: str, body: RenameTagRequest, db: AsyncSession = Depends(get_db)):
+    """Rename a tag across all items."""
+    await db.execute(
+        text("UPDATE items SET tags = array_replace(tags, :old, :new) WHERE :old = ANY(tags)"),
+        {"old": tag, "new": body.new_name},
     )
-    total_before = total_before_result.scalar_one()
-
-    groups = await svc.consolidate_tags(threshold=body.threshold, dry_run=True)
-    merged_count = sum(len(g["merged"]) for g in groups)
-
-    return ConsolidateResponse(
-        groups=[MergeGroup(**g) for g in groups],
-        total_tags_before=total_before,
-        total_tags_after=total_before - merged_count,
+    await db.commit()
+    result = await db.execute(
+        text("SELECT COUNT(*) FROM items WHERE :tag = ANY(tags)"),
+        {"tag": body.new_name},
     )
+    count = result.scalar_one()
+    return TagCount(tag=body.new_name, count=count)
 
 
-@router.post("/consolidate", response_model=ConsolidateResponse)
-async def apply_consolidate(
-    body: ApplyConsolidateRequest, db: AsyncSession = Depends(get_db)
-):
-    """Apply a user-edited tag consolidation plan."""
-    tag_repo = TagRepository(db)
-    svc = TagDedupService(tag_repo, embedding_service)
-
-    total_before_result = await db.execute(
-        text("SELECT COUNT(DISTINCT tag) FROM (SELECT unnest(tags) AS tag FROM items) t")
+@router.delete("/{tag}", status_code=204)
+async def delete_tag(tag: str, db: AsyncSession = Depends(get_db)):
+    """Remove a tag from all items."""
+    await db.execute(
+        text("UPDATE items SET tags = array_remove(tags, :tag) WHERE :tag = ANY(tags)"),
+        {"tag": tag},
     )
-    total_before = total_before_result.scalar_one()
-
-    plan = [{"canonical": g.canonical, "merged": g.merged} for g in body.groups]
-    groups = await svc.apply_plan(plan)
-    merged_count = sum(len(g["merged"]) for g in groups)
-
-    return ConsolidateResponse(
-        groups=[MergeGroup(**g) for g in groups],
-        total_tags_before=total_before,
-        total_tags_after=total_before - merged_count,
-    )
+    await db.commit()

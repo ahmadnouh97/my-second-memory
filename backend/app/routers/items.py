@@ -2,12 +2,11 @@ import uuid
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import settings
 from app.database import get_db
 from app.repositories.item_repository import ItemRepository
-from app.repositories.tag_repository import TagRepository
 from app.schemas.item import (
     ExtractPreview,
     ExtractRequest,
@@ -20,16 +19,17 @@ from app.services.ai_service import enrich_metadata
 from app.services.embedding_service import embedding_service
 from app.services.metadata_extractor import extract_metadata
 from app.services.search_service import hybrid_search
-from app.services.tag_dedup_service import TagDedupService
 
 router = APIRouter()
 
 
 @router.post("/extract", response_model=ExtractPreview)
-async def extract_url(body: ExtractRequest):
+async def extract_url(body: ExtractRequest, db: AsyncSession = Depends(get_db)):
     """Extract metadata from a URL and return an AI-enriched preview (not saved)."""
     raw = extract_metadata(body.url)
-    enriched = enrich_metadata(raw)
+    result = await db.execute(text("SELECT DISTINCT unnest(tags) AS tag FROM items"))
+    existing_tags = [row.tag for row in result.all()]
+    enriched = enrich_metadata(raw, existing_tags=existing_tags)
     return ExtractPreview(
         url=raw.url,
         content_type=raw.content_type,
@@ -46,10 +46,6 @@ async def extract_url(body: ExtractRequest):
 async def create_item(body: ItemCreate, db: AsyncSession = Depends(get_db)):
     """Save a confirmed item to the database."""
     repo = ItemRepository(db)
-    tag_repo = TagRepository(db)
-    svc = TagDedupService(tag_repo, embedding_service)
-    normalized_tags = await svc.normalize_tags(body.tags, threshold=settings.tag_normalize_threshold)
-    body = body.model_copy(update={"tags": normalized_tags})
     emb = await embedding_service.encode_for_item(body.title, body.summary)
     return await repo.create(body, embedding=emb)
 
@@ -102,13 +98,6 @@ async def update_item(item_id: uuid.UUID, body: ItemUpdate, db: AsyncSession = D
     existing = await repo.get_by_id(item_id)
     if not existing:
         raise HTTPException(status_code=404, detail="Item not found")
-
-    # Normalize tags if provided
-    if body.tags is not None:
-        tag_repo = TagRepository(db)
-        svc = TagDedupService(tag_repo, embedding_service)
-        normalized_tags = await svc.normalize_tags(body.tags, threshold=settings.tag_normalize_threshold)
-        body = body.model_copy(update={"tags": normalized_tags})
 
     # Regenerate embedding if title or summary changed
     new_embedding = None
