@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -8,7 +9,9 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
 import '../providers/items_provider.dart';
+import '../services/api_service.dart';
 import '../theme/app_theme.dart';
+import '../utils/download_utils.dart';
 import '../widgets/filter_bar.dart';
 import '../widgets/item_card.dart';
 import '../widgets/shimmer_card.dart';
@@ -60,6 +63,147 @@ class _HomePageState extends ConsumerState<HomePage> {
   Future<void> _onRefresh() async {
     _searchController.clear();
     await ref.read(itemsProvider.notifier).loadInitial();
+  }
+
+  Future<void> _exportItems(String format) async {
+    final api = ApiService();
+    try {
+      final bytes = await api.exportItems(format);
+      final filename = 'items.$format';
+      final path = await saveFile(bytes, filename);
+      if (!mounted) return;
+      final msg = path != null ? 'Saved to $path' : 'Download started';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg)),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Export failed: $e'), backgroundColor: AppColors.error),
+      );
+    }
+  }
+
+  Future<void> _importItems(String format) async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: [format],
+      withData: true,
+    );
+    if (result == null || result.files.isEmpty) return;
+
+    final bytes = result.files.first.bytes;
+    if (bytes == null) return;
+
+    final api = ApiService();
+    try {
+      final importResult = await api.importItems(bytes, format);
+      if (!mounted) return;
+      ref.read(itemsProvider.notifier).resetAndReload();
+      final msg = 'Imported ${importResult.imported}, '
+          'skipped ${importResult.skipped}'
+          '${importResult.errors.isNotEmpty ? ', ${importResult.errors.length} errors' : ''}';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg)),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Import failed: $e'), backgroundColor: AppColors.error),
+      );
+    }
+  }
+
+  Future<void> _showImportFormatDialog() async {
+    final format = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Import format'),
+        content: const Text('Choose the file format to import:'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, 'json'),
+            child: const Text('JSON'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, 'csv'),
+            child: const Text('CSV'),
+          ),
+        ],
+      ),
+    );
+    if (format != null) await _importItems(format);
+  }
+
+  Future<void> _clearAllData() async {
+    // First confirmation
+    final step1 = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Clear all data?'),
+        content: const Text(
+          'This will permanently delete every saved item. This cannot be undone.',
+          style: TextStyle(color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            child: const Text('Continue'),
+          ),
+        ],
+      ),
+    );
+    if (step1 != true || !mounted) return;
+
+    // Second confirmation — type-to-confirm style
+    final step2 = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Are you absolutely sure?'),
+        content: const Text(
+          'All items will be deleted permanently. There is no way to recover them.',
+          style: TextStyle(color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.white,
+              backgroundColor: AppColors.error,
+            ),
+            child: const Text('Delete everything'),
+          ),
+        ],
+      ),
+    );
+    if (step2 != true || !mounted) return;
+
+    HapticFeedback.heavyImpact();
+    try {
+      final count = await ApiService().clearAllItems();
+      if (!mounted) return;
+      ref.read(itemsProvider.notifier).resetAndReload();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Deleted $count items')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to clear data: $e'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
   }
 
   Future<void> _confirmDelete(String id, String title) async {
@@ -140,6 +284,61 @@ class _HomePageState extends ConsumerState<HomePage> {
                               ),
                             ],
                           ),
+                        ),
+                        PopupMenuButton<String>(
+                          icon: const Icon(Icons.import_export_rounded,
+                              color: AppColors.primary, size: 24),
+                          tooltip: 'Import / Export',
+                          onSelected: (value) {
+                            switch (value) {
+                              case 'export_json':
+                                _exportItems('json');
+                              case 'export_csv':
+                                _exportItems('csv');
+                              case 'import':
+                                _showImportFormatDialog();
+                              case 'clear':
+                                _clearAllData();
+                            }
+                          },
+                          itemBuilder: (_) => [
+                            const PopupMenuItem(
+                              value: 'export_json',
+                              child: ListTile(
+                                leading: Icon(Icons.download_rounded),
+                                title: Text('Export as JSON'),
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                            ),
+                            const PopupMenuItem(
+                              value: 'export_csv',
+                              child: ListTile(
+                                leading: Icon(Icons.table_chart_outlined),
+                                title: Text('Export as CSV'),
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                            ),
+                            const PopupMenuDivider(),
+                            const PopupMenuItem(
+                              value: 'import',
+                              child: ListTile(
+                                leading: Icon(Icons.upload_rounded),
+                                title: Text('Import...'),
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                            ),
+                            const PopupMenuDivider(),
+                            PopupMenuItem(
+                              value: 'clear',
+                              child: ListTile(
+                                leading: Icon(Icons.delete_forever_rounded,
+                                    color: AppColors.error),
+                                title: Text('Clear all data',
+                                    style: TextStyle(color: AppColors.error)),
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                            ),
+                          ],
                         ),
                         IconButton(
                           icon: const Icon(Icons.label_outline_rounded,

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
@@ -185,6 +186,37 @@ class ApiService {
   }
 
   Future<void> deleteItem(String id) => _delete('/api/items/$id');
+
+  Future<Uint8List> exportItems(String format) async {
+    final res = await _client.get(
+      _uri('/api/items/export', {'format': format}),
+    );
+    _check(res);
+    return res.bodyBytes;
+  }
+
+  Future<int> clearAllItems() async {
+    final res = await _client.delete(_uri('/api/items'));
+    _check(res);
+    final body = jsonDecode(res.body) as Map<String, dynamic>;
+    return body['deleted'] as int;
+  }
+
+  Future<ImportResult> importItems(Uint8List fileBytes, String format) async {
+    final request = http.MultipartRequest(
+      'POST',
+      _uri('/api/items/import', {'format': format}),
+    );
+    request.files.add(http.MultipartFile.fromBytes(
+      'file',
+      fileBytes,
+      filename: 'import.$format',
+    ));
+    final streamed = await _client.send(request);
+    final res = await http.Response.fromStream(streamed);
+    _check(res);
+    return ImportResult.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
+  }
 
   // ── Tags ───────────────────────────────────────────────────────────────────
 

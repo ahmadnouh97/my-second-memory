@@ -44,6 +44,24 @@ class PaginatedResponse with _$PaginatedResponse {
       _$PaginatedResponseFromJson(json);
 }
 
+class ImportResult {
+  const ImportResult({
+    required this.imported,
+    required this.skipped,
+    required this.errors,
+  });
+
+  final int imported;
+  final int skipped;
+  final List<String> errors;
+
+  factory ImportResult.fromJson(Map<String, dynamic> json) => ImportResult(
+        imported: json['imported'] as int,
+        skipped: json['skipped'] as int,
+        errors: (json['errors'] as List<dynamic>).cast<String>(),
+      );
+}
+
 @freezed
 class ExtractPreview with _$ExtractPreview {
   const factory ExtractPreview({
