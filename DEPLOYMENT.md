@@ -124,12 +124,48 @@ Certbot updates the Nginx config to serve HTTPS on port 443 and auto-renews the 
    BACKEND_URL=https://memo-api.nouhlab.com
    ```
 
-### 2.2 Configure the domain
+### 2.2 Configure the port mapping
 
-Assign `https://memo.nouhlab.com` on port `80`.
-Enable **Let's Encrypt**.
+Do **not** assign a domain or enable Let's Encrypt in Coolify for this resource — Nginx on the host handles that (see 2.3).
 
-### 2.3 Deploy
+In the resource → **Ports** (or **Network**) tab, map the container port to a free host port:
+
+| Host port | Container port |
+|-----------|----------------|
+| `3000` | `80` |
+
+This exposes the Flutter nginx container at `http://127.0.0.1:3000` on the VPS, which the host Nginx will proxy.
+
+### 2.3 Configure Nginx reverse proxy (first deploy only)
+
+```bash
+sudo vim /etc/nginx/sites-available/memo
+```
+
+```nginx
+server {
+    listen 80;
+    server_name memo.nouhlab.com;
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+```bash
+sudo ln -s /etc/nginx/sites-available/memo /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+sudo certbot --nginx -d memo.nouhlab.com
+```
+
+**Cloudflare SSL/TLS setting:** set to **Full (Strict)**.
+
+### 2.4 Deploy
 
 Click **Deploy**. The build takes a few minutes (Flutter SDK download is cached after the first run).
 
