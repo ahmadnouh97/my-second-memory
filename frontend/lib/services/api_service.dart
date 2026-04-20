@@ -18,6 +18,10 @@ class ApiException implements Exception {
   String toString() => 'ApiException($statusCode): $message';
 }
 
+class UnauthorizedException extends ApiException {
+  const UnauthorizedException() : super('Unauthorized', statusCode: 401);
+}
+
 class ApiService {
   ApiService({http.Client? client, this.token}) : _client = client ?? http.Client();
 
@@ -91,6 +95,7 @@ class ApiService {
 
   void _check(http.Response res) {
     if (res.statusCode >= 400) {
+      if (res.statusCode == 401) throw const UnauthorizedException();
       String message = 'Request failed';
       try {
         final body = jsonDecode(res.body) as Map<String, dynamic>;
