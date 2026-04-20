@@ -66,7 +66,7 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   Future<void> _exportItems(String format) async {
-    final api = ApiService();
+    final api = ref.read(apiServiceProvider);
     try {
       final bytes = await api.exportItems(format);
       final filename = 'items.$format';
@@ -95,7 +95,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     final bytes = result.files.first.bytes;
     if (bytes == null) return;
 
-    final api = ApiService();
+    final api = ref.read(apiServiceProvider);
     try {
       final importResult = await api.importItems(bytes, format);
       if (!mounted) return;
@@ -189,7 +189,7 @@ class _HomePageState extends ConsumerState<HomePage> {
 
     HapticFeedback.heavyImpact();
     try {
-      final count = await ApiService().clearAllItems();
+      final count = await ref.read(apiServiceProvider).clearAllItems();
       if (!mounted) return;
       ref.read(itemsProvider.notifier).resetAndReload();
       ScaffoldMessenger.of(context).showSnackBar(
@@ -351,6 +351,12 @@ class _HomePageState extends ConsumerState<HomePage> {
                               color: AppColors.primary, size: 24),
                           onPressed: () => context.push('/chat'),
                           tooltip: 'Memory Assistant',
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.account_circle_outlined,
+                              color: AppColors.primary, size: 24),
+                          onPressed: () => context.push('/profile'),
+                          tooltip: 'Profile',
                         ),
                       ],
                     ),

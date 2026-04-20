@@ -1,3 +1,5 @@
+import uuid
+
 from app.models.item import Item
 from app.repositories.item_repository import ItemRepository
 from app.services.embedding_service import embedding_service
@@ -8,6 +10,7 @@ RRF_K = 60
 async def hybrid_search(
     repo: ItemRepository,
     query: str,
+    user_id: uuid.UUID,
     tags: list[str] | None = None,
     content_type: str | None = None,
     limit: int = 20,
@@ -18,23 +21,18 @@ async def hybrid_search(
     """
     query_embedding = await embedding_service.encode(query)
 
-    # Run both searches in parallel (asyncio gather would require restructuring;
-    # sequential is fine for now — both are fast indexed queries)
-    vector_results = await repo.vector_search(query_embedding, limit=limit * 2)
-    fts_results = await repo.fulltext_search(query, limit=limit * 2)
+    vector_results = await repo.vector_search(query_embedding, user_id=user_id, limit=limit * 2)
+    fts_results = await repo.fulltext_search(query, user_id=user_id, limit=limit * 2)
 
-    # Build rank maps: item_id → rank (1-indexed)
     vector_ranks: dict[str, int] = {str(item.id): rank for rank, (item, _) in enumerate(vector_results, 1)}
     fts_ranks: dict[str, int] = {str(item.id): rank for rank, (item, _) in enumerate(fts_results, 1)}
 
-    # Collect all unique items
     all_items: dict[str, Item] = {}
     for item, _ in vector_results:
         all_items[str(item.id)] = item
     for item, _ in fts_results:
         all_items[str(item.id)] = item
 
-    # Compute RRF score for each item
     def rrf_score(item_id: str) -> float:
         score = 0.0
         if item_id in vector_ranks:
@@ -45,7 +43,6 @@ async def hybrid_search(
 
     sorted_ids = sorted(all_items.keys(), key=rrf_score, reverse=True)
 
-    # Apply optional post-filters (tags, content_type)
     results: list[Item] = []
     for item_id in sorted_ids:
         item = all_items[item_id]

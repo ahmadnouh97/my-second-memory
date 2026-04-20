@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user
 from app.database import get_db
+from app.models.user import User
 from app.repositories.item_repository import ItemRepository
 from app.schemas.item import (
     ExtractPreview,
@@ -25,14 +26,19 @@ from app.services.import_service import parse_csv, parse_json
 from app.services.metadata_extractor import extract_metadata
 from app.services.search_service import hybrid_search
 
-router = APIRouter(dependencies=[Depends(get_current_user)])
+router = APIRouter()
 
 
 @router.post("/extract", response_model=ExtractPreview)
-async def extract_url(body: ExtractRequest, db: AsyncSession = Depends(get_db)):
-    """Extract metadata from a URL and return an AI-enriched preview (not saved)."""
+async def extract_url(
+    body: ExtractRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     raw = extract_metadata(body.url)
-    result = await db.execute(text("SELECT DISTINCT unnest(tags) AS tag FROM items"))
+    result = await db.execute(
+        text("SELECT DISTINCT unnest(tags) AS tag FROM items WHERE user_id = :uid").bindparams(uid=current_user.id)
+    )
     existing_tags = [row.tag for row in result.all()]
     enriched = enrich_metadata(raw, existing_tags=existing_tags)
     return ExtractPreview(
@@ -48,11 +54,14 @@ async def extract_url(body: ExtractRequest, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("", response_model=ItemResponse, status_code=201)
-async def create_item(body: ItemCreate, db: AsyncSession = Depends(get_db)):
-    """Save a confirmed item to the database."""
+async def create_item(
+    body: ItemCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     repo = ItemRepository(db)
     emb = await embedding_service.encode_for_item(body.title, body.summary)
-    return await repo.create(body, embedding=emb)
+    return await repo.create(body, embedding=emb, user_id=current_user.id)
 
 
 @router.get("", response_model=PaginatedItemsResponse)
@@ -63,10 +72,13 @@ async def list_items(
     date_to: datetime | None = Query(default=None),
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=20, ge=1, le=100),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     repo = ItemRepository(db)
-    items, total = await repo.list_filtered(tags, content_type, date_from, date_to, page, limit)
+    items, total = await repo.list_filtered(
+        current_user.id, tags, content_type, date_from, date_to, page, limit
+    )
     return PaginatedItemsResponse(
         items=[ItemResponse.model_validate(i) for i in items],
         total=total,
@@ -81,21 +93,22 @@ async def search_items(
     tags: list[str] | None = Query(default=None),
     content_type: str | None = Query(default=None),
     limit: int = Query(default=20, ge=1, le=50),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     repo = ItemRepository(db)
-    results = await hybrid_search(repo, q, tags, content_type, limit)
+    results = await hybrid_search(repo, q, user_id=current_user.id, tags=tags, content_type=content_type, limit=limit)
     return [ItemResponse.model_validate(i) for i in results]
 
 
 @router.get("/export")
 async def export_items(
     format: str = Query(default="json", pattern="^(json|csv)$"),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Export all items as a JSON or CSV file download."""
     repo = ItemRepository(db)
-    items = await repo.list_all()
+    items = await repo.list_all(current_user.id)
 
     if format == "csv":
         content = export_as_csv(items)
@@ -117,9 +130,9 @@ async def export_items(
 async def import_items(
     format: str = Query(default="json", pattern="^(json|csv)$"),
     file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Import items from a JSON or CSV file. Duplicate URLs are skipped."""
     content = (await file.read()).decode("utf-8")
 
     if format == "csv":
@@ -138,14 +151,14 @@ async def import_items(
             skipped += 1
             continue
 
-        existing = await repo.get_by_url(item_data.url)
+        existing = await repo.get_by_url(item_data.url, current_user.id)
         if existing:
             skipped += 1
             continue
 
         try:
             emb = await embedding_service.encode_for_item(item_data.title, item_data.summary)
-            await repo.create(item_data, embedding=emb)
+            await repo.create(item_data, embedding=emb, user_id=current_user.id)
             imported += 1
         except Exception as e:
             errors.append(f"Failed to save '{item_data.url}': {e}")
@@ -155,43 +168,57 @@ async def import_items(
 
 
 @router.delete("", status_code=200)
-async def clear_all_items(db: AsyncSession = Depends(get_db)):
-    """Delete all items from the database. Returns the count of deleted items."""
+async def clear_all_items(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     repo = ItemRepository(db)
-    count = await repo.delete_all()
+    count = await repo.delete_all(current_user.id)
     return {"deleted": count}
 
 
 @router.get("/{item_id}", response_model=ItemResponse)
-async def get_item(item_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+async def get_item(
+    item_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     repo = ItemRepository(db)
-    item = await repo.get_by_id(item_id)
+    item = await repo.get_by_id(item_id, current_user.id)
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
     return ItemResponse.model_validate(item)
 
 
 @router.put("/{item_id}", response_model=ItemResponse)
-async def update_item(item_id: uuid.UUID, body: ItemUpdate, db: AsyncSession = Depends(get_db)):
+async def update_item(
+    item_id: uuid.UUID,
+    body: ItemUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     repo = ItemRepository(db)
-    existing = await repo.get_by_id(item_id)
+    existing = await repo.get_by_id(item_id, current_user.id)
     if not existing:
         raise HTTPException(status_code=404, detail="Item not found")
 
-    # Regenerate embedding if title or summary changed
     new_embedding = None
     new_title = body.title or existing.title
     new_summary = body.summary if body.summary is not None else existing.summary
     if body.title or body.summary is not None:
         new_embedding = await embedding_service.encode_for_item(new_title, new_summary)
 
-    item = await repo.update(item_id, body, embedding=new_embedding)
+    item = await repo.update(item_id, body, user_id=current_user.id, embedding=new_embedding)
     return ItemResponse.model_validate(item)
 
 
 @router.delete("/{item_id}", status_code=204)
-async def delete_item(item_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+async def delete_item(
+    item_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     repo = ItemRepository(db)
-    deleted = await repo.delete(item_id)
+    deleted = await repo.delete(item_id, current_user.id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Item not found")

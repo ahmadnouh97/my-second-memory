@@ -64,9 +64,12 @@ class ItemsState {
 }
 
 class ItemsNotifier extends StateNotifier<ItemsState> {
-  ItemsNotifier(this._api) : super(const ItemsState());
+  ItemsNotifier(this._api, {required Future<void> Function() onUnauthorized})
+      : _onUnauthorized = onUnauthorized,
+        super(const ItemsState());
 
   final ApiService _api;
+  final Future<void> Function() _onUnauthorized;
   static const _pageSize = 20;
 
   Future<void> loadInitial() async {
@@ -82,8 +85,8 @@ class ItemsNotifier extends StateNotifier<ItemsState> {
         hasMore: resp.items.length >= _pageSize,
       );
     } catch (e) {
-      state = state.copyWith(
-          isLoading: false, error: () => e.toString());
+      if (e is UnauthorizedException) { await _onUnauthorized(); return; }
+      state = state.copyWith(isLoading: false, error: () => e.toString());
     }
   }
 
@@ -110,6 +113,7 @@ class ItemsNotifier extends StateNotifier<ItemsState> {
         hasMore: resp.items.length >= _pageSize,
       );
     } catch (e) {
+      if (e is UnauthorizedException) { await _onUnauthorized(); return; }
       state = state.copyWith(isLoadingMore: false);
     }
   }
@@ -131,8 +135,8 @@ class ItemsNotifier extends StateNotifier<ItemsState> {
       );
       state = state.copyWith(items: results, isLoading: false, hasMore: false);
     } catch (e) {
-      state = state.copyWith(
-          isLoading: false, error: () => e.toString());
+      if (e is UnauthorizedException) { await _onUnauthorized(); return; }
+      state = state.copyWith(isLoading: false, error: () => e.toString());
     }
   }
 
@@ -156,8 +160,8 @@ class ItemsNotifier extends StateNotifier<ItemsState> {
           hasMore: resp.items.length >= _pageSize,
         );
       } catch (e) {
-        state = state.copyWith(
-            isLoading: false, error: () => e.toString());
+        if (e is UnauthorizedException) { await _onUnauthorized(); return; }
+        state = state.copyWith(isLoading: false, error: () => e.toString());
       }
     }
   }
@@ -207,5 +211,8 @@ class ItemsNotifier extends StateNotifier<ItemsState> {
 final itemsProvider =
     StateNotifierProvider<ItemsNotifier, ItemsState>((ref) {
   final api = ref.watch(apiServiceProvider);
-  return ItemsNotifier(api);
+  return ItemsNotifier(
+    api,
+    onUnauthorized: () => ref.read(authProvider.notifier).logout(),
+  );
 });

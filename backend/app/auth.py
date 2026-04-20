@@ -1,42 +1,32 @@
-import json
+import uuid
 from datetime import datetime, timedelta, timezone
 
-import bcrypt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
+from app.database import get_db
+from app.models.user import User
+from app.repositories.user_repository import UserRepository
 
 _bearer = HTTPBearer(auto_error=False)
 
 
-def _load_users() -> list[dict]:
-    try:
-        return json.loads(settings.auth_users)
-    except (json.JSONDecodeError, ValueError):
-        return []
-
-
-def authenticate_user(username: str, password: str) -> bool:
-    for user in _load_users():
-        if user.get("username") == username:
-            stored = user.get("password", "")
-            try:
-                return bcrypt.checkpw(password.encode(), stored.encode())
-            except Exception:
-                return False
-    return False
-
-
-def create_access_token(username: str) -> str:
+def create_access_token(user: User) -> str:
     expire = datetime.now(timezone.utc) + timedelta(minutes=settings.jwt_expire_minutes)
-    return jwt.encode({"sub": username, "exp": expire}, settings.jwt_secret, algorithm="HS256")
+    return jwt.encode(
+        {"sub": str(user.id), "email": user.email, "exp": expire},
+        settings.jwt_secret,
+        algorithm="HS256",
+    )
 
 
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
-) -> str:
+    db: AsyncSession = Depends(get_db),
+) -> User:
     exc = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Invalid or expired token",
@@ -48,9 +38,14 @@ async def get_current_user(
         payload = jwt.decode(
             credentials.credentials, settings.jwt_secret, algorithms=["HS256"]
         )
-        username: str | None = payload.get("sub")
-        if not username:
+        user_id_str: str | None = payload.get("sub")
+        if not user_id_str:
             raise exc
-        return username
-    except JWTError:
+        user_id = uuid.UUID(user_id_str)
+    except (JWTError, ValueError):
         raise exc
+
+    user = await UserRepository(db).get_by_id(user_id)
+    if user is None:
+        raise exc
+    return user
