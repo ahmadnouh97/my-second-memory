@@ -30,6 +30,7 @@ services:
       GOOGLE_API_KEY: ${GOOGLE_API_KEY}
       APP_ENV: ${APP_ENV:-development}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8100,http://localhost:4200}
+      JWT_SECRET: ${JWT_SECRET}
       REGISTRATION_ENABLED: ${REGISTRATION_ENABLED:-true}
       BCRYPT_ROUNDS: ${BCRYPT_ROUNDS:-12}
       UV_PROJECT_ENVIRONMENT: /opt/venv
