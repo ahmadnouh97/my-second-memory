@@ -33,28 +33,29 @@ class AuthNotifier extends StateNotifier<AuthState> {
   final AuthService _service;
 
   Future<void> initialize() async {
-    final token = await _service.getToken();
-    if (token == null) {
-      state = const AuthState();
-      return;
-    }
-    // Try to fetch fresh user info; fall back to cached user on network error
     try {
-      final freshUser = await _service.fetchMe(token);
-      state = AuthState(token: token, user: freshUser);
-    } on AuthException {
-      // Server rejected the token — it's invalid, clear session regardless of cache
-      await _service.clearSession();
-      state = const AuthState();
-    } catch (_) {
-      // Network error — use cached user as fallback
-      final cachedUser = await _service.getUser();
-      if (cachedUser != null) {
-        state = AuthState(token: token, user: cachedUser);
-      } else {
+      final token = await _service.getToken();
+      if (token == null) {
+        state = const AuthState();
+        return;
+      }
+      try {
+        final freshUser = await _service.fetchMe(token);
+        state = AuthState(token: token, user: freshUser);
+      } on AuthException {
         await _service.clearSession();
         state = const AuthState();
+      } catch (_) {
+        final cachedUser = await _service.getUser();
+        if (cachedUser != null) {
+          state = AuthState(token: token, user: cachedUser);
+        } else {
+          await _service.clearSession();
+          state = const AuthState();
+        }
       }
+    } catch (_) {
+      state = const AuthState();
     }
   }
 
