@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -15,13 +17,21 @@ import '../providers/auth_provider.dart';
 const _publicRoutes = {'/login', '/register'};
 
 class _AuthRouterNotifier extends ChangeNotifier {
-  _AuthRouterNotifier(WidgetRef ref) {
-    ref.listenManual<AuthState>(authProvider, (_, __) => notifyListeners());
+  _AuthRouterNotifier(Stream<AuthState> stream) {
+    _sub = stream.listen((_) => notifyListeners());
+  }
+
+  late final StreamSubscription<AuthState> _sub;
+
+  @override
+  void dispose() {
+    _sub.cancel();
+    super.dispose();
   }
 }
 
 GoRouter buildRouter(WidgetRef ref) {
-  final notifier = _AuthRouterNotifier(ref);
+  final notifier = _AuthRouterNotifier(ref.read(authProvider.notifier).stream);
   return GoRouter(
     refreshListenable: notifier,
     redirect: (context, state) {
