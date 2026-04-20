@@ -11,13 +11,14 @@ from langgraph.prebuilt import create_react_agent
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth import get_current_user
 from app.config import settings
 from app.database import get_db
 from app.repositories.item_repository import ItemRepository
 from app.schemas.item import ItemResponse
 from app.services.search_service import hybrid_search
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(get_current_user)])
 
 
 class ChatMessage(BaseModel):

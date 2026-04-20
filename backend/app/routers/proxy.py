@@ -1,8 +1,10 @@
 import httpx
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
 
-router = APIRouter()
+from app.auth import get_current_user
+
+router = APIRouter(dependencies=[Depends(get_current_user)])
 
 _HEADERS = {"User-Agent": "Mozilla/5.0"}
 
