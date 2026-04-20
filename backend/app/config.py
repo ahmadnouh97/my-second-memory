@@ -1,3 +1,4 @@
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -9,10 +10,16 @@ class Settings(BaseSettings):
     google_api_key: str
     app_env: str = "development"
     cors_origins: str = "http://localhost:8100,http://localhost:4200"
-    # JSON array of {"username": "...", "password": "<bcrypt_hash>"} objects
-    auth_users: str = "[]"
     jwt_secret: str = "change-me-in-production"
     jwt_expire_minutes: int = 60 * 24 * 7  # 7 days
+    registration_enabled: bool = True
+    bcrypt_rounds: int = 12
+
+    @model_validator(mode="after")
+    def check_production_secret(self) -> "Settings":
+        if self.app_env == "production" and self.jwt_secret == "change-me-in-production":
+            raise ValueError("JWT_SECRET must be set to a secure value in production")
+        return self
 
     @property
     def cors_origins_list(self) -> list[str]:
