@@ -1,4 +1,5 @@
 import json
+import uuid
 from datetime import datetime
 from typing import AsyncIterator
 
@@ -14,11 +15,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth import get_current_user
 from app.config import settings
 from app.database import get_db
+from app.models.user import User
 from app.repositories.item_repository import ItemRepository
 from app.schemas.item import ItemResponse
 from app.services.search_service import hybrid_search
 
-router = APIRouter(dependencies=[Depends(get_current_user)])
+router = APIRouter()
 
 
 class ChatMessage(BaseModel):
@@ -45,7 +47,7 @@ ITEMS_JSON: [{"id": "...", "title": "...", "url": "...", "thumbnail_url": "...",
 Put this JSON block at the END of your response after the text explanation."""
 
 
-def make_tools(db: AsyncSession):
+def make_tools(db: AsyncSession, user_id: uuid.UUID):
     @tool
     async def search_items_tool(query: str, content_type: str | None = None) -> str:
         """Search the user's saved content library using semantic + keyword search.
@@ -55,7 +57,7 @@ def make_tools(db: AsyncSession):
             content_type: Optional filter - one of: youtube, instagram, linkedin, github, facebook, tiktok, reddit, other
         """
         repo = ItemRepository(db)
-        results = await hybrid_search(repo, query, content_type=content_type, limit=5)
+        results = await hybrid_search(repo, query, user_id=user_id, content_type=content_type, limit=5)
         if not results:
             return "No items found matching that query."
         items_data = [ItemResponse.model_validate(i).model_dump(mode="json") for i in results]
@@ -83,6 +85,7 @@ def make_tools(db: AsyncSession):
         parsed_from = datetime.fromisoformat(date_from) if date_from else None
         parsed_to = datetime.fromisoformat(date_to) if date_to else None
         items, total = await repo.list_filtered(
+            user_id=user_id,
             tags=tags,
             content_type=content_type,
             date_from=parsed_from,
@@ -99,7 +102,7 @@ def make_tools(db: AsyncSession):
 
 
 async def _stream_agent_response(
-    message: str, history: list[ChatMessage], db: AsyncSession
+    message: str, history: list[ChatMessage], db: AsyncSession, user_id: uuid.UUID
 ) -> AsyncIterator[str]:
     llm = ChatGroq(
         model="qwen/qwen3-32b",
@@ -107,7 +110,7 @@ async def _stream_agent_response(
         temperature=0,
         streaming=True,
     )
-    tools = make_tools(db)
+    tools = make_tools(db, user_id)
     agent = create_react_agent(llm, tools)
 
     messages = [SystemMessage(content=SYSTEM_PROMPT)]
@@ -122,7 +125,6 @@ async def _stream_agent_response(
     async for chunk in agent.astream({"messages": messages}, stream_mode="values"):
         last_message = chunk["messages"][-1]
         if isinstance(last_message, AIMessage) and last_message.content:
-            # Only stream new content (delta)
             new_content = last_message.content
             if new_content.startswith(full_text):
                 delta = new_content[len(full_text):]
@@ -130,12 +132,10 @@ async def _stream_agent_response(
                 if delta:
                     yield f"data: {json.dumps({'type': 'text', 'content': delta})}\n\n"
 
-    # Parse out ITEMS_JSON if present in the final message
     if "ITEMS_JSON:" in full_text:
         parts = full_text.split("ITEMS_JSON:", 1)
         items_json_str = parts[1].strip()
         try:
-            # Find the JSON array
             start = items_json_str.index("[")
             end = items_json_str.rindex("]") + 1
             items_data = json.loads(items_json_str[start:end])
@@ -147,9 +147,13 @@ async def _stream_agent_response(
 
 
 @router.post("")
-async def chat(body: ChatRequest, db: AsyncSession = Depends(get_db)):
+async def chat(
+    body: ChatRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     return StreamingResponse(
-        _stream_agent_response(body.message, body.history, db),
+        _stream_agent_response(body.message, body.history, db, current_user.id),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
