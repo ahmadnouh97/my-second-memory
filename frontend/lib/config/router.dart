@@ -7,8 +7,12 @@ import '../pages/chat_page.dart';
 import '../pages/home_page.dart';
 import '../pages/item_detail_page.dart';
 import '../pages/login_page.dart';
+import '../pages/profile_page.dart';
+import '../pages/register_page.dart';
 import '../pages/tags_page.dart';
 import '../providers/auth_provider.dart';
+
+const _publicRoutes = {'/login', '/register'};
 
 class _AuthRouterNotifier extends ChangeNotifier {
   _AuthRouterNotifier(Ref ref) {
@@ -23,9 +27,9 @@ GoRouter buildRouter(Ref ref) {
     redirect: (context, state) {
       final auth = ref.read(authProvider);
       if (auth.isLoading) return null;
-      final isLogin = state.matchedLocation == '/login';
-      if (!auth.isAuthenticated && !isLogin) return '/login';
-      if (auth.isAuthenticated && isLogin) return '/home';
+      final isPublic = _publicRoutes.contains(state.matchedLocation);
+      if (!auth.isAuthenticated && !isPublic) return '/login';
+      if (auth.isAuthenticated && isPublic) return '/home';
       return null;
     },
     initialLocation: '/home',
@@ -33,6 +37,10 @@ GoRouter buildRouter(Ref ref) {
       GoRoute(
         path: '/login',
         builder: (ctx, state) => const LoginPage(),
+      ),
+      GoRoute(
+        path: '/register',
+        builder: (ctx, state) => const RegisterPage(),
       ),
       GoRoute(
         path: '/home',
@@ -57,6 +65,10 @@ GoRouter buildRouter(Ref ref) {
       GoRoute(
         path: '/tags',
         builder: (ctx, state) => const TagsPage(),
+      ),
+      GoRoute(
+        path: '/profile',
+        builder: (ctx, state) => const ProfilePage(),
       ),
     ],
   );
