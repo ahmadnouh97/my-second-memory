@@ -15,6 +15,12 @@ class UserModel {
         createdAt: DateTime.parse(json['created_at'] as String),
       );
 
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'email': email,
+        'created_at': createdAt.toIso8601String(),
+      };
+
   UserModel copyWith({String? id, String? email, DateTime? createdAt}) =>
       UserModel(
         id: id ?? this.id,

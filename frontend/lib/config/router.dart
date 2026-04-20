@@ -15,12 +15,12 @@ import '../providers/auth_provider.dart';
 const _publicRoutes = {'/login', '/register'};
 
 class _AuthRouterNotifier extends ChangeNotifier {
-  _AuthRouterNotifier(Ref ref) {
-    ref.listen<AuthState>(authProvider, (_, __) => notifyListeners());
+  _AuthRouterNotifier(WidgetRef ref) {
+    ref.listenManual<AuthState>(authProvider, (_, __) => notifyListeners());
   }
 }
 
-GoRouter buildRouter(Ref ref) {
+GoRouter buildRouter(WidgetRef ref) {
   final notifier = _AuthRouterNotifier(ref);
   return GoRouter(
     refreshListenable: notifier,
