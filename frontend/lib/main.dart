@@ -33,7 +33,7 @@ class _SecondMemoryAppState extends ConsumerState<SecondMemoryApp> {
   @override
   void initState() {
     super.initState();
-    _router = appRouter;
+    _router = buildRouter(ref);
     _checkInitialShareIntent();
     _listenForShareIntents();
   }

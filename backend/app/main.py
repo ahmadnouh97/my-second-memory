@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routers import chat, items, proxy, tags
+from app.routers import auth, chat, items, proxy, tags
 from app.services.embedding_service import embedding_service
 
 
@@ -29,6 +29,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(items.router, prefix="/api/items", tags=["items"])
 app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
 app.include_router(proxy.router, prefix="/api/proxy", tags=["proxy"])
