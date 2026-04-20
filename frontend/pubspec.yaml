@@ -46,6 +46,9 @@ dependencies:
   # SVG rendering
   flutter_svg: ^2.0.17
 
+  # Auth token persistence
+  shared_preferences: ^2.3.0
+
   # Import/Export
   file_picker: ^8.1.7
   path_provider: ^2.1.5
