@@ -19,10 +19,16 @@ class ApiException implements Exception {
 }
 
 class ApiService {
-  ApiService({http.Client? client}) : _client = client ?? http.Client();
+  ApiService({http.Client? client, this.token}) : _client = client ?? http.Client();
 
   final http.Client _client;
+  final String? token;
   String get _base => Environment.baseUrl;
+
+  Map<String, String> get _headers => {
+        'Content-Type': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      };
 
   // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -43,8 +49,7 @@ class ApiService {
 
   Future<Map<String, dynamic>> _get(String path,
       [Map<String, dynamic>? params]) async {
-    final res = await _client.get(_uri(path, params),
-        headers: {'Content-Type': 'application/json'});
+    final res = await _client.get(_uri(path, params), headers: _headers);
     _check(res);
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
@@ -52,7 +57,7 @@ class ApiService {
   Future<Map<String, dynamic>> _post(String path, Object body) async {
     final res = await _client.post(
       _uri(path),
-      headers: {'Content-Type': 'application/json'},
+      headers: _headers,
       body: jsonEncode(body),
     );
     _check(res);
@@ -62,7 +67,7 @@ class ApiService {
   Future<Map<String, dynamic>> _put(String path, Object body) async {
     final res = await _client.put(
       _uri(path),
-      headers: {'Content-Type': 'application/json'},
+      headers: _headers,
       body: jsonEncode(body),
     );
     _check(res);
@@ -72,7 +77,7 @@ class ApiService {
   Future<Map<String, dynamic>> _patch(String path, Object body) async {
     final res = await _client.patch(
       _uri(path),
-      headers: {'Content-Type': 'application/json'},
+      headers: _headers,
       body: jsonEncode(body),
     );
     _check(res);
@@ -80,7 +85,7 @@ class ApiService {
   }
 
   Future<void> _delete(String path) async {
-    final res = await _client.delete(_uri(path));
+    final res = await _client.delete(_uri(path), headers: _headers);
     _check(res);
   }
 
@@ -151,7 +156,7 @@ class ApiService {
         if (contentType != null) 'content_type': contentType.name,
         if (tags != null && tags.isNotEmpty) 'tags': tags,
       }),
-      headers: {'Content-Type': 'application/json'},
+      headers: _headers,
     );
     _check(res);
     final decoded = jsonDecode(res.body);
@@ -190,13 +195,14 @@ class ApiService {
   Future<Uint8List> exportItems(String format) async {
     final res = await _client.get(
       _uri('/api/items/export', {'format': format}),
+      headers: _headers,
     );
     _check(res);
     return res.bodyBytes;
   }
 
   Future<int> clearAllItems() async {
-    final res = await _client.delete(_uri('/api/items'));
+    final res = await _client.delete(_uri('/api/items'), headers: _headers);
     _check(res);
     final body = jsonDecode(res.body) as Map<String, dynamic>;
     return body['deleted'] as int;
@@ -207,6 +213,7 @@ class ApiService {
       'POST',
       _uri('/api/items/import', {'format': format}),
     );
+    if (token != null) request.headers['Authorization'] = 'Bearer $token';
     request.files.add(http.MultipartFile.fromBytes(
       'file',
       fileBytes,
@@ -223,7 +230,7 @@ class ApiService {
   Future<List<TagCount>> getTags() async {
     final res = await _client.get(
       _uri('/api/tags'),
-      headers: {'Content-Type': 'application/json'},
+      headers: _headers,
     );
     _check(res);
     final list = jsonDecode(res.body) as List<dynamic>;
@@ -251,6 +258,7 @@ class ApiService {
     try {
       final request = http.Request('POST', _uri('/api/chat'));
       request.headers['Content-Type'] = 'application/json';
+      if (token != null) request.headers['Authorization'] = 'Bearer $token';
       request.body = jsonEncode({
         'message': message,
         'history': history.map((m) {

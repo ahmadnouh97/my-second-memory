@@ -3,10 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/item.dart';
 import '../services/api_service.dart';
 import '../widgets/filter_bar.dart';
+import 'auth_provider.dart';
 
 // ── Singleton ApiService ────────────────────────────────────────────────────
 
-final apiServiceProvider = Provider<ApiService>((ref) => ApiService());
+final apiServiceProvider = Provider<ApiService>((ref) {
+  final token = ref.watch(authProvider).token;
+  return ApiService(token: token);
+});
 
 // ── Items list state ────────────────────────────────────────────────────────
 
