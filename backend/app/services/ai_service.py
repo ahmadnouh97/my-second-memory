@@ -1,7 +1,9 @@
+import groq as groq_sdk
 from langchain_groq import ChatGroq
 from pydantic import BaseModel, Field
 
 from app.config import settings
+from app.errors import RateLimitError, extract_groq_retry_after
 from app.services.metadata_extractor import RawMetadata
 
 
@@ -141,7 +143,28 @@ GOOD tags: ["machine-learning", "pytorch", "transformers", "deep-learning", "nlp
 
 If the content is in Arabic or another language, keep the title and summary in that same language."""
 
-    enriched = structured.invoke(prompt)
+    try:
+        enriched = structured.invoke(prompt)
+    except groq_sdk.RateLimitError as e:
+        raise RateLimitError(
+            service="llm",
+            retry_after=extract_groq_retry_after(e),
+            message="LLM provider rate limit exceeded",
+        ) from e
+    except Exception as e:
+        # LangChain sometimes wraps groq.RateLimitError — inspect the cause chain
+        cause = getattr(e, "__cause__", None) or getattr(e, "__context__", None)
+        if isinstance(cause, groq_sdk.RateLimitError):
+            raise RateLimitError(
+                service="llm",
+                retry_after=extract_groq_retry_after(cause),
+                message="LLM provider rate limit exceeded",
+            ) from e
+        msg = str(e).lower()
+        if "rate_limit" in msg or "rate limit" in msg or "429" in msg:
+            raise RateLimitError(service="llm", message="LLM provider rate limit exceeded") from e
+        raise
+
     return EnrichedMetadata(
         title=enriched.title,
         summary=enriched.summary,
