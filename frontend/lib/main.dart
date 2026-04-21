@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'config/router.dart';
+import 'providers/auth_provider.dart';
 import 'services/share_service.dart';
 import 'theme/app_theme.dart';
 
@@ -40,14 +41,29 @@ class _SecondMemoryAppState extends ConsumerState<SecondMemoryApp> {
 
   Future<void> _checkInitialShareIntent() async {
     final url = await ShareService.getInitialSharedUrl();
-    if (url != null && mounted) {
+    if (url == null || !mounted) return;
+
+    // Wait for auth initialization to settle before navigating — without this,
+    // the router redirect can fire while isLoading=false but isAuthenticated=false
+    // (cold start race) and send the user to /login instead of /add-item.
+    var auth = ref.read(authProvider);
+    if (auth.isLoading) {
+      auth = await ref
+          .read(authProvider.notifier)
+          .stream
+          .firstWhere((s) => !s.isLoading);
+    }
+
+    if (auth.isAuthenticated && mounted) {
       _router.go('/add-item?url=${Uri.encodeComponent(url)}');
     }
   }
 
   void _listenForShareIntents() {
     ShareService.urlStream.listen((url) {
-      if (mounted) {
+      if (!mounted) return;
+      final auth = ref.read(authProvider);
+      if (auth.isAuthenticated) {
         _router.go('/add-item?url=${Uri.encodeComponent(url)}');
       }
     });
