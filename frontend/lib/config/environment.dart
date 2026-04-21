@@ -6,8 +6,12 @@ class Environment {
     // Use BACKEND_URL if injected at build time, otherwise fall back to defaults.
     const injected = String.fromEnvironment('BACKEND_URL', defaultValue: '');
     if (injected.isNotEmpty) return injected;
-    // On Android emulator the host machine is reachable via 10.0.2.2.
-    // On web (flutter run -d chrome) localhost works fine.
-    return _isRelease ? 'http://10.0.2.2:8001' : 'http://localhost:8001';
+    // Release builds (e.g. the distributed APK) target the public backend.
+    // Debug builds default to localhost; pass --dart-define=BACKEND_URL=...
+    // to override (e.g. http://10.0.2.2:8001 for the Android emulator, or
+    // http://192.168.x.x:8001 for a real device on the LAN).
+    return _isRelease
+        ? 'https://memo-api.nouhlab.com'
+        : 'http://localhost:8001';
   }
 }

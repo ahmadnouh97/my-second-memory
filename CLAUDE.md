@@ -116,7 +116,7 @@ One table:
 Flutter + Riverpod + go_router + Material 3. Targets Android (native) and web (Chrome, port 4200).
 
 - `main.dart` — app entry point, sets up `ProviderScope` and `GoRouter`
-- `config/environment.dart` — resolves `baseUrl` (`localhost:8001` on web, `10.0.2.2:8001` on Android emulator)
+- `config/environment.dart` — resolves `baseUrl`. Debug builds default to `http://localhost:8001`; release builds default to the production backend `https://memo-api.nouhlab.com`. Override at build/run time with `--dart-define=BACKEND_URL=...`.
 - `config/router.dart` — go_router route definitions
 - `services/api_service.dart` — all HTTP calls; `chatStream()` async generator consumes SSE via `fetch` + `ReadableStream`
 - `services/share_service.dart` — reads incoming Android share intent, navigates to `/add-item?url=...`
@@ -131,7 +131,7 @@ Flutter + Riverpod + go_router + Material 3. Targets Android (native) and web (C
 - `UV_PROJECT_ENVIRONMENT=/opt/venv` — venv lives outside `/app` so the dev volume mount (`./backend:/app`) doesn't clobber it
 - `UV_LINK_MODE=copy` — required on Docker Desktop (different filesystems)
 - `backend/.dockerignore` excludes `.venv/` — critical, a Linux `.venv` left in `backend/` will break the Windows Docker build context
-- Android emulator uses `http://10.0.2.2:8001`; real device needs the host machine's LAN IP passed via `--dart-define=BACKEND_URL=http://192.168.x.x:8001`
+- Release APKs target `https://memo-api.nouhlab.com` by default (baked into `config/environment.dart`). For local development against the Docker backend, override with `--dart-define=BACKEND_URL=...`: use `http://10.0.2.2:8001` on the Android emulator, or `http://192.168.x.x:8001` (host's LAN IP) on a real device. Plain-HTTP LAN URLs on a real device additionally require `android:usesCleartextTraffic="true"` in `AndroidManifest.xml`.
 - `REGISTRATION_ALLOWED_EMAILS` — comma-separated list of allowed emails/patterns for registration. Supports exact emails (`alice@example.com`), domain wildcards (`*@company.com`), or `*` to allow all. Empty/unset = **no one can register** (fail-closed). Precedence: `REGISTRATION_ENABLED=false` > whitelist. The Flutter login page hides the "Create an account" button when registration is not open.
 
 ### Adding a new LLM provider
