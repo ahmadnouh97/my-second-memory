@@ -21,6 +21,7 @@ dependencies = [
     "langgraph==0.2.60",
     # Embeddings (Google AI Studio)
     "google-genai>=1.0.0",
+    "google-api-core>=2.19.0",
     # Metadata extraction
     "yt-dlp>=2025.1.26",
     "trafilatura==2.0.0",
