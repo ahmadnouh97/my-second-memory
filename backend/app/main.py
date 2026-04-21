@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -7,11 +8,17 @@ from app.config import settings
 from app.routers import auth, chat, items, proxy, tags
 from app.services.embedding_service import embedding_service
 
+logger = logging.getLogger(__name__)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Warm up the embedding model on startup
     embedding_service.warmup()
+    allowed = settings.allowed_emails_list
+    if not allowed:
+        logger.warning("REGISTRATION_ALLOWED_EMAILS is unset — all new registrations are blocked")
+    else:
+        logger.info("Registration whitelist: %d pattern(s) configured", len(allowed))
     yield
 
 

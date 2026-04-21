@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
+import '../services/auth_service.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -35,6 +36,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   @override
   Widget build(BuildContext context) {
     final auth = ref.watch(authProvider);
+    final policy = ref.watch(registrationPolicyProvider).valueOrNull ??
+        const RegistrationPolicy(enabled: false, whitelistMode: 'restricted');
 
     return Scaffold(
       body: Container(
@@ -145,11 +148,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                             : const Text('Sign In'),
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    TextButton(
-                      onPressed: () => context.push('/register'),
-                      child: const Text('Create an account'),
-                    ),
+                    if (policy.canRegister) ...[
+                      const SizedBox(height: 16),
+                      TextButton(
+                        onPressed: () => context.push('/register'),
+                        child: const Text('Create an account'),
+                      ),
+                    ],
                   ],
                 ),
               ),

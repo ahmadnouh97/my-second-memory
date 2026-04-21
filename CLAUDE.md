@@ -132,6 +132,7 @@ Flutter + Riverpod + go_router + Material 3. Targets Android (native) and web (C
 - `UV_LINK_MODE=copy` — required on Docker Desktop (different filesystems)
 - `backend/.dockerignore` excludes `.venv/` — critical, a Linux `.venv` left in `backend/` will break the Windows Docker build context
 - Android emulator uses `http://10.0.2.2:8001`; real device needs the host machine's LAN IP passed via `--dart-define=BACKEND_URL=http://192.168.x.x:8001`
+- `REGISTRATION_ALLOWED_EMAILS` — comma-separated list of allowed emails/patterns for registration. Supports exact emails (`alice@example.com`), domain wildcards (`*@company.com`), or `*` to allow all. Empty/unset = **no one can register** (fail-closed). Precedence: `REGISTRATION_ENABLED=false` > whitelist. The Flutter login page hides the "Create an account" button when registration is not open.
 
 ### Adding a new LLM provider
 

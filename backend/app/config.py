@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     jwt_secret: str = "change-me-in-production"
     jwt_expire_minutes: int = 60 * 24 * 7  # 7 days
     registration_enabled: bool = True
+    registration_allowed_emails: str = ""
     bcrypt_rounds: int = 12
 
     @model_validator(mode="after")
@@ -24,6 +25,14 @@ class Settings(BaseSettings):
     @property
     def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",")]
+
+    @property
+    def allowed_emails_list(self) -> tuple[str, ...]:
+        return tuple(
+            token.lower().strip()
+            for token in self.registration_allowed_emails.split(",")
+            if token.strip()
+        )
 
 
 settings = Settings()
