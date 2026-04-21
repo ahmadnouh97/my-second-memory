@@ -46,6 +46,12 @@ dependencies:
   # SVG rendering
   flutter_svg: ^2.0.17
 
+  # Markdown rendering
+  flutter_markdown: ^0.7.6
+
+  # Date/time formatting
+  intl: ^0.20.0
+
   # Auth token persistence
   shared_preferences: ^2.3.0
 

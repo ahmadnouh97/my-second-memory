@@ -4,9 +4,9 @@ from datetime import datetime
 from typing import AsyncIterator
 
 import groq as groq_sdk
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_core.tools import tool
 from langchain_groq import ChatGroq
 from langgraph.prebuilt import create_react_agent
@@ -104,7 +104,11 @@ def make_tools(db: AsyncSession, user_id: uuid.UUID):
 
 
 async def _stream_agent_response(
-    message: str, history: list[ChatMessage], db: AsyncSession, user_id: uuid.UUID
+    message: str,
+    history: list[ChatMessage],
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    request: Request,
 ) -> AsyncIterator[str]:
     llm = ChatGroq(
         model="qwen/qwen3-32b",
@@ -116,7 +120,7 @@ async def _stream_agent_response(
     agent = create_react_agent(llm, tools)
 
     messages = [SystemMessage(content=SYSTEM_PROMPT)]
-    for msg in history[-10:]:  # Keep last 10 messages for context
+    for msg in history[-10:]:
         if msg.role == "user":
             messages.append(HumanMessage(content=msg.content))
         else:
@@ -126,14 +130,34 @@ async def _stream_agent_response(
     full_text = ""
     try:
         async for chunk in agent.astream({"messages": messages}, stream_mode="values"):
+            if await request.is_disconnected():
+                return
+
             last_message = chunk["messages"][-1]
-            if isinstance(last_message, AIMessage) and last_message.content:
-                new_content = last_message.content
-                if new_content.startswith(full_text):
-                    delta = new_content[len(full_text):]
-                    full_text = new_content
-                    if delta:
-                        yield f"data: {json.dumps({'type': 'text', 'content': delta})}\n\n"
+
+            if isinstance(last_message, AIMessage):
+                if last_message.tool_calls and not last_message.content:
+                    # Agent is invoking tools
+                    for tc in last_message.tool_calls:
+                        tool_name = tc.get("name", "") if isinstance(tc, dict) else getattr(tc, "name", "")
+                        yield f"data: {json.dumps({'type': 'tool_start', 'tool': tool_name})}\n\n"
+                elif last_message.content:
+                    new_content = last_message.content
+                    if isinstance(new_content, list):
+                        new_content = "".join(
+                            c.get("text", "") if isinstance(c, dict) else str(c)
+                            for c in new_content
+                        )
+                    if new_content.startswith(full_text):
+                        delta = new_content[len(full_text):]
+                        full_text = new_content
+                        if delta:
+                            yield f"data: {json.dumps({'type': 'text', 'content': delta})}\n\n"
+
+            elif isinstance(last_message, ToolMessage):
+                tool_name = getattr(last_message, "name", "") or ""
+                yield f"data: {json.dumps({'type': 'tool_end', 'tool': tool_name})}\n\n"
+
     except RateLimitError as e:
         yield f"data: {json.dumps({'type': 'error', 'error_type': ERROR_TYPE_RATE_LIMIT, 'service': e.service, 'retry_after': e.retry_after, 'message': 'Chat service rate-limited. Please wait and try again.'})}\n\n"
         yield "data: [DONE]\n\n"
@@ -168,11 +192,12 @@ async def _stream_agent_response(
 @router.post("")
 async def chat(
     body: ChatRequest,
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     return StreamingResponse(
-        _stream_agent_response(body.message, body.history, db, current_user.id),
+        _stream_agent_response(body.message, body.history, db, current_user.id, request),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",

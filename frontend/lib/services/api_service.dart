@@ -283,9 +283,11 @@ class ApiService {
 
   Stream<ChatChunk> chatStream(
     String message,
-    List<ChatMessage> history,
-  ) async* {
-    final client = http.Client();
+    List<ChatMessage> history, {
+    http.Client? httpClient,
+  }) async* {
+    final client = httpClient ?? http.Client();
+    final ownsClient = httpClient == null;
     try {
       final request = http.Request('POST', _uri('/api/chat'));
       request.headers['Content-Type'] = 'application/json';
@@ -293,11 +295,9 @@ class ApiService {
       request.body = jsonEncode({
         'message': message,
         'history': history.map((m) {
-          final rawContent = m.content;
-          // Strip ITEMS_JSON from history entries before sending to backend
-          final cleanContent = rawContent.contains('ITEMS_JSON:')
-              ? rawContent.split('ITEMS_JSON:').first.trim()
-              : rawContent;
+          final cleanContent = m.content.contains('ITEMS_JSON:')
+              ? m.content.split('ITEMS_JSON:').first.trim()
+              : m.content;
           return {
             'role': m.role == ChatRole.user ? 'user' : 'assistant',
             'content': cleanContent,
@@ -311,28 +311,29 @@ class ApiService {
           String? service;
           int? retryAfter;
           try {
-            final body = jsonDecode(await http.Response.fromStream(streamed).then((r) => r.body))
+            final body = jsonDecode(
+                    await http.Response.fromStream(streamed).then((r) => r.body))
                 as Map<String, dynamic>;
             if (body['error_type'] == 'rate_limit') {
               service = body['service'] as String?;
               final ra = body['retry_after'];
-              retryAfter = ra is int ? ra : (ra != null ? int.tryParse('$ra') : null);
+              retryAfter =
+                  ra is int ? ra : (ra != null ? int.tryParse('$ra') : null);
             }
           } catch (_) {}
           yield ChatChunk.error(message: rateLimitMessage(service, retryAfter));
         } else {
-          yield ChatChunk.error(message: 'Server error ${streamed.statusCode}');
+          yield ChatChunk.error(
+              message: 'Server error ${streamed.statusCode}');
         }
         return;
       }
 
       String buffer = '';
-      await for (final raw
-          in streamed.stream.transform(utf8.decoder)) {
+      await for (final raw in streamed.stream.transform(utf8.decoder)) {
         buffer += raw;
-        // SSE lines are separated by '\n\n'
         final parts = buffer.split('\n\n');
-        buffer = parts.last; // keep incomplete chunk
+        buffer = parts.last;
         for (final part in parts.sublist(0, parts.length - 1)) {
           for (final line in part.split('\n')) {
             if (!line.startsWith('data: ')) continue;
@@ -344,23 +345,37 @@ class ApiService {
             try {
               final json = jsonDecode(data) as Map<String, dynamic>;
               final type = json['type'] as String?;
-              if (type == 'text') {
-                yield ChatChunk.text(content: json['content'] as String);
-              } else if (type == 'items') {
-                final rawItems = json['items'] as List<dynamic>;
-                final items = rawItems
-                    .map((e) => Item.fromJson(e as Map<String, dynamic>))
-                    .toList();
-                yield ChatChunk.items(items: items);
-              } else if (type == 'error') {
-                if (json['error_type'] == 'rate_limit') {
-                  final service = json['service'] as String?;
-                  final ra = json['retry_after'];
-                  final retryAfter = ra is int ? ra : (ra != null ? int.tryParse('$ra') : null);
-                  yield ChatChunk.error(message: rateLimitMessage(service, retryAfter));
-                } else {
-                  yield ChatChunk.error(message: json['message'] as String? ?? 'Unknown error');
-                }
+              switch (type) {
+                case 'text':
+                  yield ChatChunk.text(content: json['content'] as String);
+                case 'items':
+                  final rawItems = json['items'] as List<dynamic>;
+                  yield ChatChunk.items(
+                    items: rawItems
+                        .map((e) => Item.fromJson(e as Map<String, dynamic>))
+                        .toList(),
+                  );
+                case 'tool_start':
+                  yield ChatChunk.toolStart(
+                      tool: json['tool'] as String? ?? '');
+                case 'tool_end':
+                  yield ChatChunk.toolEnd(tool: json['tool'] as String? ?? '');
+                case 'thinking':
+                  yield const ChatChunk.thinking();
+                case 'error':
+                  if (json['error_type'] == 'rate_limit') {
+                    final service = json['service'] as String?;
+                    final ra = json['retry_after'];
+                    final retryAfter = ra is int
+                        ? ra
+                        : (ra != null ? int.tryParse('$ra') : null);
+                    yield ChatChunk.error(
+                        message: rateLimitMessage(service, retryAfter));
+                  } else {
+                    yield ChatChunk.error(
+                        message:
+                            json['message'] as String? ?? 'Unknown error');
+                  }
               }
             } catch (_) {
               // skip malformed chunk
@@ -372,7 +387,7 @@ class ApiService {
     } catch (e) {
       yield ChatChunk.error(message: e.toString());
     } finally {
-      client.close();
+      if (ownsClient) client.close();
     }
   }
 }
