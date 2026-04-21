@@ -7,7 +7,9 @@ import 'package:go_router/go_router.dart';
 
 import '../models/item.dart';
 import '../providers/items_provider.dart';
+import '../services/api_service.dart';
 import '../theme/app_theme.dart';
+import '../utils/error_messages.dart';
 import '../utils/image_utils.dart';
 import '../widgets/content_type_badge.dart';
 import '../widgets/tag_chip.dart';
@@ -79,7 +81,9 @@ class _AddItemPageState extends ConsumerState<AddItemPage> {
     } catch (e) {
       setState(() {
         _state = _AddState.idle;
-        _error = e.toString().replaceFirst('ApiException', '').trim();
+        _error = e is RateLimitException
+            ? rateLimitMessage(e.service, e.retryAfter)
+            : e.toString().replaceFirst('ApiException', '').trim();
       });
     }
   }
@@ -108,7 +112,9 @@ class _AddItemPageState extends ConsumerState<AddItemPage> {
     } catch (e) {
       setState(() {
         _state = _AddState.preview;
-        _error = e.toString().replaceFirst('ApiException', '').trim();
+        _error = e is RateLimitException
+            ? rateLimitMessage(e.service, e.retryAfter)
+            : e.toString().replaceFirst('ApiException', '').trim();
       });
     }
   }
