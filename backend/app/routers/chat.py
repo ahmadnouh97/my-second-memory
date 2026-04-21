@@ -3,6 +3,7 @@ import uuid
 from datetime import datetime
 from typing import AsyncIterator
 
+import groq as groq_sdk
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
@@ -15,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth import get_current_user
 from app.config import settings
 from app.database import get_db
+from app.errors import ERROR_TYPE_RATE_LIMIT, RateLimitError, extract_groq_retry_after
 from app.models.user import User
 from app.repositories.item_repository import ItemRepository
 from app.schemas.item import ItemResponse
@@ -122,15 +124,32 @@ async def _stream_agent_response(
     messages.append(HumanMessage(content=message))
 
     full_text = ""
-    async for chunk in agent.astream({"messages": messages}, stream_mode="values"):
-        last_message = chunk["messages"][-1]
-        if isinstance(last_message, AIMessage) and last_message.content:
-            new_content = last_message.content
-            if new_content.startswith(full_text):
-                delta = new_content[len(full_text):]
-                full_text = new_content
-                if delta:
-                    yield f"data: {json.dumps({'type': 'text', 'content': delta})}\n\n"
+    try:
+        async for chunk in agent.astream({"messages": messages}, stream_mode="values"):
+            last_message = chunk["messages"][-1]
+            if isinstance(last_message, AIMessage) and last_message.content:
+                new_content = last_message.content
+                if new_content.startswith(full_text):
+                    delta = new_content[len(full_text):]
+                    full_text = new_content
+                    if delta:
+                        yield f"data: {json.dumps({'type': 'text', 'content': delta})}\n\n"
+    except RateLimitError as e:
+        yield f"data: {json.dumps({'type': 'error', 'error_type': ERROR_TYPE_RATE_LIMIT, 'service': e.service, 'retry_after': e.retry_after, 'message': 'Chat service rate-limited. Please wait and try again.'})}\n\n"
+        yield "data: [DONE]\n\n"
+        return
+    except groq_sdk.RateLimitError as e:
+        yield f"data: {json.dumps({'type': 'error', 'error_type': ERROR_TYPE_RATE_LIMIT, 'service': 'llm', 'retry_after': extract_groq_retry_after(e), 'message': 'Chat service rate-limited. Please wait and try again.'})}\n\n"
+        yield "data: [DONE]\n\n"
+        return
+    except Exception as e:
+        cause = getattr(e, "__cause__", None) or getattr(e, "__context__", None)
+        msg = str(e).lower()
+        if isinstance(cause, groq_sdk.RateLimitError) or "rate_limit" in msg or "429" in msg:
+            yield f"data: {json.dumps({'type': 'error', 'error_type': ERROR_TYPE_RATE_LIMIT, 'service': 'llm', 'retry_after': None, 'message': 'Chat service rate-limited. Please wait and try again.'})}\n\n"
+            yield "data: [DONE]\n\n"
+            return
+        raise
 
     if "ITEMS_JSON:" in full_text:
         parts = full_text.split("ITEMS_JSON:", 1)

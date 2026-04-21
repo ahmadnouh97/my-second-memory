@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/chat_message.dart';
 import '../services/api_service.dart';
+import '../utils/error_messages.dart';
 import 'items_provider.dart';
 
 class ChatState {
@@ -90,7 +91,10 @@ class ChatNotifier extends StateNotifier<ChatState> {
         }
       }
     } catch (e) {
-      state = state.copyWith(error: () => e.toString());
+      final msg = e is RateLimitException
+          ? rateLimitMessage(e.service, e.retryAfter)
+          : e.toString();
+      state = state.copyWith(error: () => msg);
     } finally {
       // Mark last message as done
       if (state.messages.isNotEmpty) {

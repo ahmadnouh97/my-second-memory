@@ -8,6 +8,7 @@ import '../config/environment.dart';
 import '../models/chat_message.dart';
 import '../models/item.dart';
 import '../models/tag.dart';
+import '../utils/error_messages.dart';
 
 class ApiException implements Exception {
   final int? statusCode;
@@ -20,6 +21,16 @@ class ApiException implements Exception {
 
 class UnauthorizedException extends ApiException {
   const UnauthorizedException() : super('Unauthorized', statusCode: 401);
+}
+
+class RateLimitException extends ApiException {
+  final String? service;
+  final int? retryAfter;
+  const RateLimitException({
+    required String message,
+    this.service,
+    this.retryAfter,
+  }) : super(message, statusCode: 429);
 }
 
 class ApiService {
@@ -96,6 +107,21 @@ class ApiService {
   void _check(http.Response res) {
     if (res.statusCode >= 400) {
       if (res.statusCode == 401) throw const UnauthorizedException();
+      if (res.statusCode == 429) {
+        String? service;
+        int? retryAfter;
+        String message = 'Service temporarily rate-limited. Please try again shortly.';
+        try {
+          final body = jsonDecode(res.body) as Map<String, dynamic>;
+          if (body['error_type'] == 'rate_limit') {
+            service = body['service'] as String?;
+            final ra = body['retry_after'];
+            retryAfter = ra is int ? ra : (ra != null ? int.tryParse('$ra') : null);
+            message = rateLimitMessage(service, retryAfter);
+          }
+        } catch (_) {}
+        throw RateLimitException(message: message, service: service, retryAfter: retryAfter);
+      }
       String message = 'Request failed';
       try {
         final body = jsonDecode(res.body) as Map<String, dynamic>;
@@ -281,7 +307,22 @@ class ApiService {
 
       final streamed = await client.send(request);
       if (streamed.statusCode >= 400) {
-        yield ChatChunk.error(message: 'Server error ${streamed.statusCode}');
+        if (streamed.statusCode == 429) {
+          String? service;
+          int? retryAfter;
+          try {
+            final body = jsonDecode(await http.Response.fromStream(streamed).then((r) => r.body))
+                as Map<String, dynamic>;
+            if (body['error_type'] == 'rate_limit') {
+              service = body['service'] as String?;
+              final ra = body['retry_after'];
+              retryAfter = ra is int ? ra : (ra != null ? int.tryParse('$ra') : null);
+            }
+          } catch (_) {}
+          yield ChatChunk.error(message: rateLimitMessage(service, retryAfter));
+        } else {
+          yield ChatChunk.error(message: 'Server error ${streamed.statusCode}');
+        }
         return;
       }
 
@@ -311,6 +352,15 @@ class ApiService {
                     .map((e) => Item.fromJson(e as Map<String, dynamic>))
                     .toList();
                 yield ChatChunk.items(items: items);
+              } else if (type == 'error') {
+                if (json['error_type'] == 'rate_limit') {
+                  final service = json['service'] as String?;
+                  final ra = json['retry_after'];
+                  final retryAfter = ra is int ? ra : (ra != null ? int.tryParse('$ra') : null);
+                  yield ChatChunk.error(message: rateLimitMessage(service, retryAfter));
+                } else {
+                  yield ChatChunk.error(message: json['message'] as String? ?? 'Unknown error');
+                }
               }
             } catch (_) {
               // skip malformed chunk

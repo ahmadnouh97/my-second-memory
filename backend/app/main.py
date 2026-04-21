@@ -1,10 +1,12 @@
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.config import settings
+from app.errors import ERROR_TYPE_RATE_LIMIT, RateLimitError
 from app.routers import auth, chat, items, proxy, tags
 from app.services.embedding_service import embedding_service
 
@@ -27,6 +29,22 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+
+@app.exception_handler(RateLimitError)
+async def rate_limit_handler(request: Request, exc: RateLimitError) -> JSONResponse:
+    logger.warning("Rate limit hit: service=%s retry_after=%s", exc.service, exc.retry_after)
+    headers = {"Retry-After": str(exc.retry_after)} if exc.retry_after is not None else {}
+    return JSONResponse(
+        status_code=429,
+        content={
+            "error_type": ERROR_TYPE_RATE_LIMIT,
+            "service": exc.service,
+            "retry_after": exc.retry_after,
+            "message": exc.message,
+        },
+        headers=headers,
+    )
 
 app.add_middleware(
     CORSMiddleware,
