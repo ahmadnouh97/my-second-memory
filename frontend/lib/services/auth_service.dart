@@ -13,6 +13,13 @@ class AuthException implements Exception {
   String toString() => message;
 }
 
+class RegistrationPolicy {
+  const RegistrationPolicy({required this.enabled, required this.whitelistMode});
+  final bool enabled;
+  final String whitelistMode;
+  bool get canRegister => enabled && whitelistMode == 'open';
+}
+
 class AuthResult {
   const AuthResult({required this.token, required this.user});
   final String token;
@@ -91,6 +98,21 @@ class AuthService {
     final user = UserModel.fromJson(data['user'] as Map<String, dynamic>);
     await _store(token, user);
     return AuthResult(token: token, user: user);
+  }
+
+  Future<RegistrationPolicy> fetchRegistrationPolicy() async {
+    final uri = Uri.parse('${Environment.baseUrl}/api/auth/registration-policy');
+    try {
+      final res = await http.get(uri);
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body) as Map<String, dynamic>;
+        return RegistrationPolicy(
+          enabled: data['enabled'] as bool? ?? false,
+          whitelistMode: data['whitelist_mode'] as String? ?? 'restricted',
+        );
+      }
+    } catch (_) {}
+    return const RegistrationPolicy(enabled: false, whitelistMode: 'restricted');
   }
 
   Future<UserModel> fetchMe(String token) async {

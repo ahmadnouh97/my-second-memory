@@ -9,10 +9,12 @@ from app.repositories.user_repository import UserRepository
 from app.schemas.user import TokenResponse, UserCreate, UserLogin, UserResponse, UserUpdate
 from app.services.user_service import (
     EmailAlreadyRegisteredError,
+    EmailNotWhitelistedError,
     InvalidCredentialsError,
     InvalidPasswordError,
     UserService,
 )
+from app.services.whitelist_service import is_email_allowed
 
 router = APIRouter()
 
@@ -21,12 +23,33 @@ def _service(db: AsyncSession) -> UserService:
     return UserService(UserRepository(db))
 
 
+@router.get("/registration-policy")
+async def registration_policy() -> dict:
+    allowed = settings.allowed_emails_list
+    if not settings.registration_enabled:
+        mode = "disabled"
+    elif not allowed:
+        mode = "restricted"
+    elif "*" in allowed:
+        mode = "open"
+    else:
+        mode = "restricted"
+    return {"enabled": settings.registration_enabled, "whitelist_mode": mode}
+
+
 @router.post("/register", response_model=TokenResponse, status_code=201)
 async def register(body: UserCreate, db: AsyncSession = Depends(get_db)) -> TokenResponse:
     if not settings.registration_enabled:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Registration is disabled")
+    allowed = settings.allowed_emails_list
+    checker = lambda e: is_email_allowed(e, allowed)
     try:
-        user = await _service(db).register(body.email, body.password)
+        user = await _service(db).register(body.email, body.password, is_allowed=checker)
+    except EmailNotWhitelistedError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This email is not authorized to register",
+        )
     except EmailAlreadyRegisteredError:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
     return TokenResponse(

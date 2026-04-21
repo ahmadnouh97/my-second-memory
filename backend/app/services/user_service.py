@@ -1,3 +1,5 @@
+from collections.abc import Callable
+
 from app.models.user import User
 from app.repositories.user_repository import UserRepository
 from app.services.password_service import DUMMY_HASH, hash_password, verify_password
@@ -15,12 +17,23 @@ class InvalidPasswordError(Exception):
     pass
 
 
+class EmailNotWhitelistedError(Exception):
+    pass
+
+
 class UserService:
     def __init__(self, repo: UserRepository):
         self._repo = repo
 
-    async def register(self, email: str, password: str) -> User:
+    async def register(
+        self,
+        email: str,
+        password: str,
+        is_allowed: Callable[[str], bool] | None = None,
+    ) -> User:
         normalized = email.lower().strip()
+        if is_allowed is not None and not is_allowed(normalized):
+            raise EmailNotWhitelistedError("Email not in whitelist")
         if await self._repo.email_exists(normalized):
             raise EmailAlreadyRegisteredError("Email already registered")
         return await self._repo.create(normalized, hash_password(password))

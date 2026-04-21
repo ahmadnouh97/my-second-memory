@@ -3,6 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/user.dart';
 import '../services/auth_service.dart';
 
+final registrationPolicyProvider = FutureProvider<RegistrationPolicy>((ref) {
+  return ref.watch(authServiceProvider).fetchRegistrationPolicy();
+});
+
 class AuthState {
   const AuthState({this.token, this.user, this.isLoading = false, this.error});
 
