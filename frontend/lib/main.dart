@@ -41,11 +41,20 @@ class _SecondMemoryAppState extends ConsumerState<SecondMemoryApp> {
 
   Future<void> _checkInitialShareIntent() async {
     final url = await ShareService.getInitialSharedUrl();
-    if (url == null || !mounted) return;
+    if (url == null) return;
+    await _handleSharedUrl(url);
+  }
 
-    // Wait for auth initialization to settle before navigating — without this,
-    // the router redirect can fire while isLoading=false but isAuthenticated=false
-    // (cold start race) and send the user to /login instead of /add-item.
+  void _listenForShareIntents() {
+    ShareService.urlStream.listen(_handleSharedUrl);
+  }
+
+  /// Wait for auth to finish loading, then navigate to /add-item with the
+  /// shared URL. Without the wait, a cold-start share can race the router's
+  /// redirect (isLoading=false but isAuthenticated not yet populated) and
+  /// briefly land on /login instead of /add-item.
+  Future<void> _handleSharedUrl(String url) async {
+    if (!mounted) return;
     var auth = ref.read(authProvider);
     if (auth.isLoading) {
       auth = await ref
@@ -53,20 +62,8 @@ class _SecondMemoryAppState extends ConsumerState<SecondMemoryApp> {
           .stream
           .firstWhere((s) => !s.isLoading);
     }
-
-    if (auth.isAuthenticated && mounted) {
-      _router.go('/add-item?url=${Uri.encodeComponent(url)}');
-    }
-  }
-
-  void _listenForShareIntents() {
-    ShareService.urlStream.listen((url) {
-      if (!mounted) return;
-      final auth = ref.read(authProvider);
-      if (auth.isAuthenticated) {
-        _router.go('/add-item?url=${Uri.encodeComponent(url)}');
-      }
-    });
+    if (!mounted || !auth.isAuthenticated) return;
+    _router.go('/add-item?url=${Uri.encodeComponent(url)}');
   }
 
   @override
