@@ -213,6 +213,15 @@ final itemsProvider =
   final api = ref.watch(apiServiceProvider);
   return ItemsNotifier(
     api,
-    onUnauthorized: () => ref.read(authProvider.notifier).logout(),
+    onUnauthorized: () {
+      // Ignore 401s while auth is still initializing — they come from
+      // requests that fired before the token was injected, not from a real
+      // expiry. Calling logout() here would wipe the token from storage.
+      final auth = ref.read(authProvider);
+      if (!auth.isLoading) {
+        return ref.read(authProvider.notifier).logout();
+      }
+      return Future.value();
+    },
   );
 });

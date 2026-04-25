@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
+import '../providers/auth_provider.dart';
 import '../providers/items_provider.dart';
 import '../services/api_service.dart';
 import '../theme/app_theme.dart';
@@ -33,7 +34,13 @@ class _HomePageState extends ConsumerState<HomePage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(itemsProvider.notifier).loadInitial();
+      if (!mounted) return;
+      final auth = ref.read(authProvider);
+      if (!auth.isLoading && auth.isAuthenticated) {
+        ref.read(itemsProvider.notifier).loadInitial();
+      }
+      // If auth is still loading, ref.listen in build() triggers loadInitial()
+      // once initialization completes.
     });
     _scrollController.addListener(_onScroll);
   }
@@ -244,6 +251,12 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<AuthState>(authProvider, (prev, next) {
+      if ((prev?.isLoading ?? true) && !next.isLoading && next.isAuthenticated) {
+        ref.read(itemsProvider.notifier).loadInitial();
+      }
+    });
+
     final state = ref.watch(itemsProvider);
 
     return Scaffold(
