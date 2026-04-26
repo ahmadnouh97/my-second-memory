@@ -253,7 +253,11 @@ class _HomePageState extends ConsumerState<HomePage> {
   Widget build(BuildContext context) {
     ref.listen<AuthState>(authProvider, (prev, next) {
       if ((prev?.isLoading ?? true) && !next.isLoading && next.isAuthenticated) {
-        ref.read(itemsProvider.notifier).loadInitial();
+        // Delay one frame so apiServiceProvider and itemsProvider rebuild
+        // with the new token before we trigger loadInitial().
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) ref.read(itemsProvider.notifier).loadInitial();
+        });
       }
     });
 

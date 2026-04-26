@@ -121,7 +121,8 @@ class AuthService {
       uri,
       headers: {'Authorization': 'Bearer $token'},
     );
-    if (res.statusCode != 200) throw const AuthException('Session expired');
+  if (res.statusCode == 401) throw const AuthException('Session expired');
+    if (res.statusCode != 200) throw Exception('Server error ${res.statusCode}');
     return UserModel.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
   }
 

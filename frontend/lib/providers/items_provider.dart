@@ -214,9 +214,10 @@ final itemsProvider =
   return ItemsNotifier(
     api,
     onUnauthorized: () {
-      // Ignore 401s while auth is still initializing — they come from
-      // requests that fired before the token was injected, not from a real
-      // expiry. Calling logout() here would wipe the token from storage.
+      // If this notifier's api had no token, the 401 came from a stale
+      // request that fired before the token was injected into the provider.
+      // Logging out here would wipe valid credentials from storage.
+      if (api.token == null) return Future.value();
       final auth = ref.read(authProvider);
       if (!auth.isLoading) {
         return ref.read(authProvider.notifier).logout();
