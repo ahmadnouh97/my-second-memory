@@ -111,7 +111,7 @@ async def _stream_agent_response(
     request: Request,
 ) -> AsyncIterator[str]:
     llm = ChatGroq(
-        model="qwen/qwen3-32b",
+        model=settings.groq_model,
         api_key=settings.groq_api_key,
         temperature=0,
         streaming=True,

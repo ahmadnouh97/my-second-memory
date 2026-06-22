@@ -20,7 +20,7 @@ def _get_llm() -> ChatGroq:
     global _llm
     if _llm is None:
         _llm = ChatGroq(
-            model="qwen/qwen3-32b",
+            model=settings.groq_model,
             api_key=settings.groq_api_key,
             temperature=0,
         )

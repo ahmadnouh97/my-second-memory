@@ -7,6 +7,7 @@ class Settings(BaseSettings):
 
     database_url: str
     groq_api_key: str
+    groq_model: str = "openai/gpt-oss-120b"
     google_api_key: str
     app_env: str = "development"
     cors_origins: str = "http://localhost:8100,http://localhost:4200"
