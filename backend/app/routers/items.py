@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import StreamingResponse
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.concurrency import run_in_threadpool
 
 from app.auth import get_current_user
 from app.database import get_db
@@ -35,12 +36,12 @@ async def extract_url(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    raw = extract_metadata(body.url)
+    raw = await run_in_threadpool(extract_metadata, body.url)
     result = await db.execute(
         text("SELECT DISTINCT unnest(tags) AS tag FROM items WHERE user_id = :uid").bindparams(uid=current_user.id)
     )
     existing_tags = [row.tag for row in result.all()]
-    enriched = enrich_metadata(raw, existing_tags=existing_tags)
+    enriched = await run_in_threadpool(enrich_metadata, raw, existing_tags=existing_tags)
     return ExtractPreview(
         url=raw.url,
         content_type=raw.content_type,

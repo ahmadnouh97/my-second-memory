@@ -117,20 +117,35 @@ class ItemRepository:
         return result.rowcount > 0
 
     async def vector_search(
-        self, embedding: list[float], user_id: uuid.UUID, limit: int = 20
+        self, embedding: list[float], user_id: uuid.UUID, limit: int = 20,
+        tags: list[str] | None = None, content_type: str | None = None,
     ) -> list[tuple[Item, float]]:
-        embedding_str = f"[{','.join(str(v) for v in embedding)}]"
+        conditions = [Item.embedding.is_not(None), Item.user_id == user_id]
+        if tags:
+            conditions.append(Item.tags.overlap(tags))
+        if content_type:
+            conditions.append(Item.content_type == content_type)
+        distance = Item.embedding.cosine_distance(embedding)
         result = await self.db.execute(
-            select(Item, (1 - Item.embedding.cosine_distance(text(f"'{embedding_str}'::vector"))).label("score"))
-            .where(Item.embedding.is_not(None), Item.user_id == user_id)
-            .order_by(Item.embedding.cosine_distance(text(f"'{embedding_str}'::vector")))
+            select(Item, (1 - distance).label("score"))
+            .where(*conditions)
+            .order_by(distance)
             .limit(limit)
         )
         return result.all()
 
     async def fulltext_search(
-        self, query: str, user_id: uuid.UUID, limit: int = 20
+        self, query: str, user_id: uuid.UUID, limit: int = 20,
+        tags: list[str] | None = None, content_type: str | None = None,
     ) -> list[tuple[Item, float]]:
+        conditions = [
+            text("fts_vector @@ plainto_tsquery('english', :q)").bindparams(q=query),
+            Item.user_id == user_id,
+        ]
+        if tags:
+            conditions.append(Item.tags.overlap(tags))
+        if content_type:
+            conditions.append(Item.content_type == content_type)
         result = await self.db.execute(
             select(
                 Item,
@@ -139,11 +154,8 @@ class ItemRepository:
                     func.plainto_tsquery("english", query),
                 ).label("score"),
             )
-            .where(
-                text("fts_vector @@ plainto_tsquery('english', :q)").bindparams(q=query),
-                Item.user_id == user_id,
-            )
-            .order_by(text("score DESC"))
+            .where(*conditions)
+            .order_by(text("score DESC"), Item.id)
             .limit(limit)
         )
         return result.all()

@@ -8,6 +8,7 @@ import '../services/api_service.dart';
 import '../services/chat_storage_service.dart';
 import '../utils/error_messages.dart';
 import 'items_provider.dart';
+import 'auth_provider.dart';
 
 // ── State ─────────────────────────────────────────────────────────────────────
 
@@ -32,15 +33,15 @@ class ChatState {
     AgentPhase? agentPhase,
     String? Function()? error,
     String? Function()? lastUserPrompt,
-  }) =>
-      ChatState(
-        messages: messages ?? this.messages,
-        isStreaming: isStreaming ?? this.isStreaming,
-        agentPhase: agentPhase ?? this.agentPhase,
-        error: error != null ? error() : this.error,
-        lastUserPrompt:
-            lastUserPrompt != null ? lastUserPrompt() : this.lastUserPrompt,
-      );
+  }) => ChatState(
+    messages: messages ?? this.messages,
+    isStreaming: isStreaming ?? this.isStreaming,
+    agentPhase: agentPhase ?? this.agentPhase,
+    error: error != null ? error() : this.error,
+    lastUserPrompt: lastUserPrompt != null
+        ? lastUserPrompt()
+        : this.lastUserPrompt,
+  );
 }
 
 // ── Notifier ──────────────────────────────────────────────────────────────────
@@ -57,8 +58,14 @@ class ChatNotifier extends StateNotifier<ChatState> {
   String _accumulatedText = '';
   int _idCounter = 0;
 
-  String _newId() =>
-      '${DateTime.now().millisecondsSinceEpoch}_${++_idCounter}';
+  String _newId() => '${DateTime.now().millisecondsSinceEpoch}_${++_idCounter}';
+
+  @override
+  void dispose() {
+    _stopping = true;
+    _activeClient?.close();
+    super.dispose();
+  }
 
   Future<void> _loadHistory() async {
     final saved = await _storage.load();
@@ -99,13 +106,16 @@ class ChatNotifier extends StateNotifier<ChatState> {
     _activeClient = http.Client();
 
     try {
-      await for (final chunk
-          in _api.chatStream(text, history, httpClient: _activeClient)) {
-        if (_stopping) break;
+      await for (final chunk in _api.chatStream(
+        text,
+        history,
+        httpClient: _activeClient,
+      )) {
+        if (_stopping || !mounted) break;
         _handleChunk(chunk);
       }
     } catch (e) {
-      if (!_stopping) {
+      if (!_stopping && mounted) {
         final msg = e is RateLimitException
             ? rateLimitMessage(e.service, e.retryAfter)
             : e.toString();
@@ -114,7 +124,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
     } finally {
       _activeClient?.close();
       _activeClient = null;
-      _finalize(wasStopped: _stopping);
+      if (mounted) _finalize(wasStopped: _stopping);
       _stopping = false;
     }
   }
@@ -128,7 +138,10 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
       case ChatChunkItems(:final items):
         _updateLastMessage(
-            content: _accumulatedText, items: items, isStreaming: true);
+          content: _accumulatedText,
+          items: items,
+          isStreaming: true,
+        );
 
       case ChatChunkToolStart(:final tool):
         state = state.copyWith(agentPhase: AgentPhaseToolRunning(tool));
@@ -171,10 +184,14 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
   void _finalize({bool wasStopped = false}) {
     if (!state.isStreaming) return;
-    final content =
-        state.messages.isNotEmpty ? state.messages.last.content : '';
+    final content = state.messages.isNotEmpty
+        ? state.messages.last.content
+        : '';
     _updateLastMessage(
-        content: content, isStreaming: false, wasStopped: wasStopped);
+      content: content,
+      isStreaming: false,
+      wasStopped: wasStopped,
+    );
     state = state.copyWith(
       isStreaming: false,
       agentPhase: const AgentPhaseIdle(),
@@ -217,11 +234,12 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
 // ── Providers ─────────────────────────────────────────────────────────────────
 
-final chatStorageProvider =
-    Provider<ChatStorageService>((_) => ChatStorageService());
+final chatStorageProvider = Provider<ChatStorageService>((ref) {
+  final userId = ref.watch(authProvider.select((state) => state.user?.id));
+  return ChatStorageService(userId: userId);
+});
 
-final chatProvider =
-    StateNotifierProvider<ChatNotifier, ChatState>((ref) {
+final chatProvider = StateNotifierProvider<ChatNotifier, ChatState>((ref) {
   final api = ref.watch(apiServiceProvider);
   final storage = ref.watch(chatStorageProvider);
   return ChatNotifier(api, storage);

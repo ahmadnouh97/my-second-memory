@@ -10,7 +10,6 @@ import 'package:go_router/go_router.dart';
 
 import '../providers/auth_provider.dart';
 import '../providers/items_provider.dart';
-import '../services/api_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/download_utils.dart';
 import '../widgets/filter_bar.dart';

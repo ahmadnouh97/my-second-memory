@@ -10,6 +10,7 @@ class TagsState {
   const TagsState({
     this.tags = const [],
     this.isLoading = false,
+    this.hasLoaded = false,
     this.isProcessing = false,
     this.error,
     this.successMessage,
@@ -17,6 +18,7 @@ class TagsState {
 
   final List<TagCount> tags;
   final bool isLoading;
+  final bool hasLoaded;
   final bool isProcessing;
   final String? error;
   final String? successMessage;
@@ -24,17 +26,20 @@ class TagsState {
   TagsState copyWith({
     List<TagCount>? tags,
     bool? isLoading,
+    bool? hasLoaded,
     bool? isProcessing,
     String? Function()? error,
     String? Function()? successMessage,
-  }) =>
-      TagsState(
-        tags: tags ?? this.tags,
-        isLoading: isLoading ?? this.isLoading,
-        isProcessing: isProcessing ?? this.isProcessing,
-        error: error != null ? error() : this.error,
-        successMessage: successMessage != null ? successMessage() : this.successMessage,
-      );
+  }) => TagsState(
+    tags: tags ?? this.tags,
+    isLoading: isLoading ?? this.isLoading,
+    hasLoaded: hasLoaded ?? this.hasLoaded,
+    isProcessing: isProcessing ?? this.isProcessing,
+    error: error != null ? error() : this.error,
+    successMessage: successMessage != null
+        ? successMessage()
+        : this.successMessage,
+  );
 }
 
 // ── Notifier ─────────────────────────────────────────────────────────────────
@@ -46,6 +51,7 @@ class TagsNotifier extends StateNotifier<TagsState> {
   final Ref _ref;
 
   Future<void> loadTags() async {
+    if (state.isLoading) return;
     state = state.copyWith(
       isLoading: true,
       error: () => null,
@@ -53,9 +59,13 @@ class TagsNotifier extends StateNotifier<TagsState> {
     );
     try {
       final tags = await _api.getTags();
-      state = state.copyWith(tags: tags, isLoading: false);
+      state = state.copyWith(tags: tags, isLoading: false, hasLoaded: true);
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: () => e.toString());
+      state = state.copyWith(
+        isLoading: false,
+        hasLoaded: true,
+        error: () => e.toString(),
+      );
     }
   }
 

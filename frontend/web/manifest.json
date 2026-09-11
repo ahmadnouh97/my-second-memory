@@ -1,11 +1,11 @@
 {
-    "name": "second_memory",
-    "short_name": "second_memory",
+    "name": "Second Memory",
+    "short_name": "Second Memory",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0A0E27",
     "theme_color": "#6366F1",
-    "description": "A new Flutter project.",
+    "description": "Save links, generate AI summaries, and search your personal knowledge library.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

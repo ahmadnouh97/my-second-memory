@@ -27,7 +27,7 @@ class WelcomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final tagsState = ref.watch(tagsProvider);
     // Trigger load if tags haven't been fetched yet
-    if (tagsState.tags.isEmpty && !tagsState.isLoading) {
+    if (!tagsState.hasLoaded && !tagsState.isLoading) {
       Future.microtask(() => ref.read(tagsProvider.notifier).loadTags());
     }
     final topTags = tagsState.tags.take(3).map((t) => t.tag).toList();
