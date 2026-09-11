@@ -9,7 +9,9 @@ These eight notes are **synthetic examples**, authored for this project. Their `
 3. Search “Why does fetching a web page freeze my Python API?” and inspect the matching note. Try filtering “cosine similarity database” to GitHub entries.
 4. Ask chat “Find my notes about evaluating retrieval.” Inspect the returned item cards, then edit a note's tags and search again.
 
-See the [24-second walkthrough](media/walkthrough.gif), assembled from actual app screenshots: library, natural-language search, and a live assistant response. It is a screenshot sequence, not a continuous recording. The assistant used the configured Groq model and retrieved two saved notes. All content comes from the synthetic fixture.
+Watch the [48-second demo video](media/walkthrough.mp4) (MP4, 1.3 MB, silent): browse the library, search with a paraphrased question, open the matching note, and ask the assistant to compare two saved notes. The assistant used the configured Groq model and returned source cards; the video also shows opening one of those sources.
+
+We captured live browser interactions with the synthetic fixture on September 11, 2026, sampling page frames at about 8 fps and exporting a 2048 × 928 H.264 MP4 at 30 fps. We trimmed pauses between steps. The video demonstrates features; it is not a latency benchmark. The capture excludes the desktop, other tabs, and audio. The [earlier screenshot sequence](media/walkthrough.gif) remains available.
 
 ![Search results for a paraphrased question](media/search.png)
 
