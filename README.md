@@ -12,7 +12,7 @@ Built with Python, FastAPI, PostgreSQL/pgvector, LangGraph, and Flutter. The app
 
 ![Natural-language search in Second Memory](examples/media/search.png)
 
-Search across a synthetic eight-note library. [Watch the 24-second screenshot walkthrough](examples/media/walkthrough.gif) or inspect the [live chat example](examples/media/chat.png). These captures use sample notes, not a private collection.
+Search across a synthetic eight-note library. [Watch the 48-second demo video](examples/media/walkthrough.mp4) or inspect the [live chat example](examples/media/chat.png). The video covers natural-language search, saved-note details, and a live assistant response with retrieved sources. These captures use sample notes, not a private collection.
 
 ## Features
 
