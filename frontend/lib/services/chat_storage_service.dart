@@ -5,10 +5,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/chat_message.dart';
 
 class ChatStorageService {
-  static const _key = 'chat_history';
+  const ChatStorageService({required this.userId});
+
+  final String? userId;
+  String get _key => 'chat_history:$userId';
   static const _maxMessages = 50;
 
   Future<void> save(List<ChatMessage> messages) async {
+    if (userId == null) return;
     final prefs = await SharedPreferences.getInstance();
     final capped = messages.length > _maxMessages
         ? messages.sublist(messages.length - _maxMessages)
@@ -20,6 +24,7 @@ class ChatStorageService {
   }
 
   Future<List<ChatMessage>> load() async {
+    if (userId == null) return [];
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_key);
     if (raw == null) return [];
@@ -34,6 +39,7 @@ class ChatStorageService {
   }
 
   Future<void> clear() async {
+    if (userId == null) return;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_key);
   }

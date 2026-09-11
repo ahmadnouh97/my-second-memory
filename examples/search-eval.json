@@ -1,0 +1,10 @@
+[
+  {"id":"exact-rrf","query":"Reciprocal Rank Fusion","relevant_urls":["https://example.com/second-memory/rrf"]},
+  {"id":"async-paraphrase","query":"Why does fetching a web page freeze my Python API?","relevant_urls":["https://example.com/second-memory/async-python"]},
+  {"id":"structured-paraphrase","query":"How can I get predictable fields from a language model?","relevant_urls":["https://example.com/second-memory/structured-output"]},
+  {"id":"evaluation","query":"How should I measure retrieval quality?","tags":["evaluation"],"relevant_urls":["https://example.com/second-memory/evaluation","https://example.com/second-memory/rag-video"]},
+  {"id":"repository-filter","query":"cosine similarity database","content_type":"github","relevant_urls":["https://example.com/second-memory/pgvector"]},
+  {"id":"video-filter","query":"testing a RAG assistant","content_type":"youtube","relevant_urls":["https://example.com/second-memory/rag-video"]},
+  {"id":"outage-paraphrase","query":"Keep search working if the embedding API goes down","relevant_urls":["https://example.com/second-memory/resilience"]},
+  {"id":"embedding-tasks","query":"Which task types do I use for document and query embeddings?","relevant_urls":["https://example.com/second-memory/embedding-tasks"]}
+]

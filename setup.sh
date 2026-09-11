@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
 # Second Memory — First-time setup script
-set -e
+set -euo pipefail
 
 echo "=== Second Memory Setup ==="
 
 # 1. Copy .env
 if [ ! -f .env ]; then
   cp .env.example .env
-  echo "[!] Created .env — add your GROQ_API_KEY before starting."
+  echo "Created .env. Set GROQ_API_KEY, GOOGLE_API_KEY, JWT_SECRET, and REGISTRATION_ALLOWED_EMAILS."
+  echo "Then run this script again."
+  exit 0
 fi
 
 # 2. Build and start backend
@@ -22,17 +24,14 @@ echo "      API docs at http://localhost:8001/docs"
 
 echo ""
 echo "=== Frontend setup ==="
-echo "Run the following to set up the Ionic frontend:"
+echo "Run the following to start the Flutter frontend:"
 echo ""
 echo "  cd frontend"
-echo "  npm install"
-echo "  npx ionic serve          # Web"
+echo "  flutter pub get"
+echo "  flutter run -d chrome --web-port=4200"
+echo "  # For an allowlisted email, register at http://localhost:4200/#/register"
 echo ""
 echo "=== Android setup ==="
 echo ""
 echo "  cd frontend"
-echo "  npm install"
-echo "  npx cap add android"
-echo "  npx cap sync"
-echo "  # Then apply the intent filter patch from android-manifest-patch.xml"
-echo "  npx cap open android     # Opens Android Studio"
+echo "  flutter run --dart-define=BACKEND_URL=http://10.0.2.2:8001"
