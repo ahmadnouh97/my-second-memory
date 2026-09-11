@@ -1,0 +1,111 @@
+{
+  "timestamp": "2026-09-11T14:40:55.706681+00:00",
+  "k": 5,
+  "query_count": 8,
+  "recall_at_k": 1,
+  "mrr_at_k": 1,
+  "median_latency_ms": 324.7,
+  "results": [
+    {
+      "id": "exact-rrf",
+      "query": "Reciprocal Rank Fusion",
+      "recall": 1,
+      "reciprocal_rank": 1,
+      "latency_ms": 444.1,
+      "returned_urls": [
+        "https://example.com/second-memory/rrf",
+        "https://example.com/second-memory/evaluation",
+        "https://example.com/second-memory/embedding-tasks",
+        "https://example.com/second-memory/rag-video",
+        "https://example.com/second-memory/structured-output"
+      ]
+    },
+    {
+      "id": "async-paraphrase",
+      "query": "Why does fetching a web page freeze my Python API?",
+      "recall": 1,
+      "reciprocal_rank": 1,
+      "latency_ms": 365.6,
+      "returned_urls": [
+        "https://example.com/second-memory/async-python",
+        "https://example.com/second-memory/resilience",
+        "https://example.com/second-memory/embedding-tasks",
+        "https://example.com/second-memory/rag-video",
+        "https://example.com/second-memory/structured-output"
+      ]
+    },
+    {
+      "id": "structured-paraphrase",
+      "query": "How can I get predictable fields from a language model?",
+      "recall": 1,
+      "reciprocal_rank": 1,
+      "latency_ms": 324.2,
+      "returned_urls": [
+        "https://example.com/second-memory/structured-output",
+        "https://example.com/second-memory/embedding-tasks",
+        "https://example.com/second-memory/rag-video",
+        "https://example.com/second-memory/evaluation",
+        "https://example.com/second-memory/rrf"
+      ]
+    },
+    {
+      "id": "evaluation",
+      "query": "How should I measure retrieval quality?",
+      "recall": 1,
+      "reciprocal_rank": 1,
+      "latency_ms": 325.2,
+      "returned_urls": [
+        "https://example.com/second-memory/evaluation",
+        "https://example.com/second-memory/rag-video"
+      ]
+    },
+    {
+      "id": "repository-filter",
+      "query": "cosine similarity database",
+      "recall": 1,
+      "reciprocal_rank": 1,
+      "latency_ms": 315.9,
+      "returned_urls": [
+        "https://example.com/second-memory/pgvector"
+      ]
+    },
+    {
+      "id": "video-filter",
+      "query": "testing a RAG assistant",
+      "recall": 1,
+      "reciprocal_rank": 1,
+      "latency_ms": 270.3,
+      "returned_urls": [
+        "https://example.com/second-memory/rag-video"
+      ]
+    },
+    {
+      "id": "outage-paraphrase",
+      "query": "Keep search working if the embedding API goes down",
+      "recall": 1,
+      "reciprocal_rank": 1,
+      "latency_ms": 351.4,
+      "returned_urls": [
+        "https://example.com/second-memory/resilience",
+        "https://example.com/second-memory/embedding-tasks",
+        "https://example.com/second-memory/pgvector",
+        "https://example.com/second-memory/rag-video",
+        "https://example.com/second-memory/async-python"
+      ]
+    },
+    {
+      "id": "embedding-tasks",
+      "query": "Which task types do I use for document and query embeddings?",
+      "recall": 1,
+      "reciprocal_rank": 1,
+      "latency_ms": 317.9,
+      "returned_urls": [
+        "https://example.com/second-memory/embedding-tasks",
+        "https://example.com/second-memory/rrf",
+        "https://example.com/second-memory/evaluation",
+        "https://example.com/second-memory/rag-video",
+        "https://example.com/second-memory/pgvector"
+      ]
+    }
+  ]
+}

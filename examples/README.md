@@ -9,7 +9,34 @@ These eight notes are **synthetic examples**, authored for this project. Their `
 3. Search “Why does fetching a web page freeze my Python API?” and inspect the matching note. Try filtering “cosine similarity database” to GitHub entries.
 4. Ask chat “Find my notes about evaluating retrieval.” Inspect the returned item cards, then edit a note's tags and search again.
 
-Use screenshots or a short screen recording of this flow in a portfolio. Describe the fixture as synthetic in captions. Test an unsupported question too: current prompting asks the assistant to acknowledge insufficient evidence, but abstention is not yet enforced or measured by this benchmark.
+See the [24-second walkthrough](media/walkthrough.gif), assembled from actual app screenshots: library, natural-language search, and a live assistant response. It is a screenshot sequence, not a continuous recording. The assistant used the configured Groq model and retrieved two saved notes. All content comes from the synthetic fixture.
+
+![Search results for a paraphrased question](media/search.png)
+
+![A live assistant comparison with retrieved item cards](media/chat.png)
+
+Test an unsupported question too: current prompting asks the assistant to acknowledge insufficient evidence, but abstention is not yet enforced or measured by this benchmark.
+
+## Measured smoke run
+
+The [complete result](results/search-2026-09-11.json) records eight queries against the eight imported notes, with no unrelated items in the test account. All eight relevant first results ranked first; all labeled relevant results appeared within the top five.
+
+| Measurement | Result |
+|---|---:|
+| Recall@5 | 1.0 |
+| MRR@5 | 1.0 |
+| Median API latency | 324.7 ms |
+
+Run conditions:
+
+- September 11, 2026; backend commit `36c348d5ea1fb2ff5a28291373bbed7bd6585366`.
+- Local Python 3.12 API and isolated PostgreSQL 16.13 / pgvector 0.8.2 database. All five migrations applied; all eight notes had embeddings.
+- Google `gemini-embedding-001`, 768 dimensions, document/query task types; real provider requests, no mocked embeddings.
+- Repository defaults: RRF constant 60, IVFFlat cosine index with 100 lists, one probe, and a GIN full-text index. The PostgreSQL planner chooses whether to use an index on this tiny corpus.
+- One sequential pass after startup warmup and import; no repeated measurements or controlled cache state. Latency includes provider network time and local API/database work.
+- Returned rankings include semantic matches, rather than keyword-only fallback. No service outage was injected during this run; regression tests exercise fallback separately.
+
+The perfect score reflects a small, authored fixture. Use it as a smoke check and expand the corpus before drawing conclusions about real collections. No before/after quality improvement is claimed.
 
 ## Run the benchmark
 
@@ -40,7 +67,7 @@ Output includes per-query returned URLs, Recall@k, reciprocal rank, latency, and
 - This is a small retrieval smoke benchmark, not a representative accuracy study. It does not measure answer faithfulness, citation support, or unanswerable queries.
 - Record the commit, embedding model, database index configuration, corpus, and whether the run was cold or warm. Keep them fixed when comparing code changes.
 - Review per-query failures. Expand the labels with realistic questions before making broader claims.
-- Unit tests verify the metric calculations with controlled rankings; **no live benchmark score has been published**.
+- Unit tests verify metric calculations with controlled rankings; the published live run above measures only this fixture.
 
 ## Resume wording supported by the implementation
 

@@ -10,6 +10,10 @@ Built with Python, FastAPI, PostgreSQL/pgvector, LangGraph, and Flutter. The app
 
 [Quick start](#quick-start) · [Architecture](#architecture) · [Tests and evaluation](#tests-and-evaluation) · [Demo walkthrough](examples/README.md) · [Deployment](DEPLOYMENT.md)
 
+![Natural-language search in Second Memory](examples/media/search.png)
+
+Search across a synthetic eight-note library. [Watch the 24-second screenshot walkthrough](examples/media/walkthrough.gif) or inspect the [live chat example](examples/media/chat.png). These captures use sample notes, not a private collection.
+
 ## Features
 
 - **Smart saving**: Paste or share any URL → AI extracts title, generates summary + tags (reusing your existing tags where they fit)
@@ -75,7 +79,7 @@ flutter test
 
 Backend tests cover rank fusion, candidate filtering, provider fallback, SQL ownership/filter predicates, chat-reference validation, tool-event handling, and extraction concurrency. Flutter tests cover account-isolated persistence, fragmented UTF-8/SSE responses, rate-limit feedback, and the empty-library welcome screen. Unit tests use mocked external services; they do not measure live model quality or replace database integration tests.
 
-The [search evaluation kit](examples/README.md) includes eight synthetic library entries, eight labeled queries, and a read-only runner that reports Recall@k, MRR@k, and median request latency from a running API. It provides a starting point for comparing retrieval changes; no live accuracy improvement is claimed without measured results.
+The [search evaluation kit](examples/README.md) includes eight synthetic library entries, eight labeled queries, and a read-only runner that reports Recall@k, MRR@k, and median request latency from a running API. In the [September 11, 2026 smoke run](examples/results/search-2026-09-11.json), Recall@5 and MRR@5 were both **1.0**, with **324.7 ms** median API latency. This eight-query fixture checks the retrieval path; it does not establish general accuracy, answer faithfulness, or improvement over a baseline. See the [run conditions](examples/README.md#measured-smoke-run).
 
 GitHub Actions runs the test suites, Flutter analysis, and a release web build on pushes and pull requests.
 

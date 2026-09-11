@@ -31,7 +31,8 @@ class AppColors {
   // Text
   static const textPrimary = Color(0xFFF1F5F9);
   static const textSecondary = Color(0xFF94A3B8);
-  static const textMuted = Color(0xFF475569);
+  // Keep summaries and input hints readable on the dark surfaces.
+  static const textMuted = Color(0xFF94A3B8);
 
   // Semantic
   static const error = Color(0xFFEF4444);
