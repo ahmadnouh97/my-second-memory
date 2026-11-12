@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jose import JWTError, jwt
+import jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -42,7 +42,7 @@ async def get_current_user(
         if not user_id_str:
             raise exc
         user_id = uuid.UUID(user_id_str)
-    except (JWTError, ValueError):
+    except (jwt.InvalidTokenError, ValueError):
         raise exc
 
     user = await UserRepository(db).get_by_id(user_id)
